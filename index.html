@@ -2911,6 +2911,7 @@ function renderSidebarRecent() {
   const root = document.getElementById('recent-root');
   let recent = [];
   try { recent = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch(e) {}
+  recent = recent.slice(0, RECENT_MAX);
   root.innerHTML = '';
   if (!recent.length) {
     root.innerHTML = '<span class="sidebar-empty">no recent files</span>';
