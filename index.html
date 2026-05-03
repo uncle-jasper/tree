@@ -846,7 +846,8 @@
     opacity: 0.35;
     font-style: italic;
   }
-  .sidebar-local-hidden { display: none; }
+  .sidebar-recent-row { justify-content: space-between; overflow: hidden; }
+  .sidebar-recent-date { font-size: 10px; opacity: 0.4; flex-shrink: 0; margin-left: 6px; }
 
   /* ── Sidebar toggle strip ─────────────────────────────────────────── */
   #sidebar-toggle {
@@ -927,12 +928,11 @@
         <div id="sidebar-dbx-header" class="sidebar-section-header"></div>
         <div id="dbx-root" class="sidebar-tree"></div>
       </div>
-      <div id="sidebar-local-section" class="sidebar-section">
-        <div id="sidebar-local-header" class="sidebar-section-header">
-          <span class="sidebar-source-name">local</span>
-          <button class="sidebar-connect" id="btn-local-folder">open folder</button>
+      <div id="sidebar-recent-section" class="sidebar-section">
+        <div class="sidebar-section-header">
+          <span class="sidebar-source-name">recent</span>
         </div>
-        <div id="local-root" class="sidebar-tree"></div>
+        <div id="recent-root" class="sidebar-tree"></div>
       </div>
     </div>
   </div>
@@ -2621,8 +2621,6 @@ let sidebarOpen    = false;
 let dbxAccessToken = null;
 let dbxRefreshToken= null;
 let dbxExpiry      = 0;
-let localDirHandle = null;
-
 // ── PKCE helpers ──
 function dbxRandomString(n) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
@@ -2820,7 +2818,7 @@ function toggleSidebar() {
   document.getElementById('sidebar-toggle').textContent = sidebarOpen ? '‹' : '›';
   if (sidebarOpen) {
     if (dbxAccessToken) renderDropboxTree('', document.getElementById('dbx-root'));
-    if (localDirHandle) renderLocalTree(localDirHandle, document.getElementById('local-root'));
+    renderSidebarRecent();
   }
 }
 
@@ -2894,160 +2892,77 @@ async function openFromDropbox(path, name) {
     fileHandle = null; isDirty = false;
     setContent(content);
   }
+  addToRecent(name, path);
   renderTabs(); updateStats(); updateCursor(); renderPreview();
   if (view) view.focus();
 }
 
-// ── Local folder (File System Access API, desktop only) ──
-function openLocalFolderPicker() {
-  if (!('showDirectoryPicker' in window)) {
-    typeStatusMessage('local folders not supported on this device.');
+// ── Recent files ──────────────────────────────────────────────────────
+const RECENT_KEY = 'tree-recent';
+const RECENT_MAX = 10;
+
+function addToRecent(name, dbxPath) {
+  let recent = [];
+  try { recent = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch(e) {}
+  recent = recent.filter(r => r.dbxPath !== dbxPath);
+  recent.unshift({ name, dbxPath, at: new Date().toISOString() });
+  if (recent.length > RECENT_MAX) recent = recent.slice(0, RECENT_MAX);
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(recent)); } catch(e) {}
+  renderSidebarRecent();
+}
+
+function formatRecentDate(iso) {
+  const d = new Date(iso);
+  const diffMs = Date.now() - d;
+  const diffHrs = Math.floor(diffMs / 3600000);
+  if (diffHrs < 1) return 'just now';
+  if (diffHrs < 24) return diffHrs + 'h ago';
+  const diffDays = Math.floor(diffMs / 86400000);
+  if (diffDays === 1) return 'yesterday';
+  if (diffDays < 7) return ['sun','mon','tue','wed','thu','fri','sat'][d.getDay()];
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function renderSidebarRecent() {
+  const root = document.getElementById('recent-root');
+  let recent = [];
+  try { recent = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch(e) {}
+  root.innerHTML = '';
+  if (!recent.length) {
+    root.innerHTML = '<span class="sidebar-empty">no recent files</span>';
     return;
   }
-  window.showDirectoryPicker({ mode: 'readwrite' }).then(async handle => {
-    localDirHandle = handle;
-    await idbPut('tree-library', 'handles', 'localDir', handle);
-    renderSidebarLocal();
-    if (sidebarOpen) renderLocalTree(localDirHandle, document.getElementById('local-root'));
-  }).catch(e => { if (e.name !== 'AbortError') console.error(e); });
-}
-
-function renderSidebarLocal() {
-  const section = document.getElementById('sidebar-local-section');
-  const hdr     = document.getElementById('sidebar-local-header');
-  if (!('showDirectoryPicker' in window)) { section.classList.add('sidebar-local-hidden'); return; }
-  if (localDirHandle) {
-    hdr.innerHTML = `<span class="sidebar-source-name" title="${localDirHandle.name}">${localDirHandle.name}</span><button class="sidebar-change" onclick="openLocalFolderPicker()">change</button>`;
-    if (sidebarOpen) renderLocalTree(localDirHandle, document.getElementById('local-root'));
-  } else {
-    hdr.innerHTML = `<span class="sidebar-source-name">local</span><button class="sidebar-connect" onclick="openLocalFolderPicker()">open folder</button>`;
-    document.getElementById('local-root').innerHTML = '';
-  }
-}
-
-async function renderLocalTree(dirHandle, container) {
-  container.innerHTML = '<span class="sidebar-loading">loading…</span>';
-  const entries = [];
-  try {
-    for await (const [name, handle] of dirHandle.entries()) {
-      if (handle.kind === 'directory') entries.push({ name, handle, kind: 'directory' });
-      else if (/\.(md|txt)$/i.test(name)) entries.push({ name, handle, kind: 'file' });
-    }
-  } catch(e) { container.innerHTML = '<span class="sidebar-empty">permission denied</span>'; return; }
-  entries.sort((a, b) => {
-    if (a.kind !== b.kind) return a.kind === 'directory' ? -1 : 1;
-    return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
-  });
-  container.innerHTML = '';
-  if (!entries.length) { container.innerHTML = '<span class="sidebar-empty">empty</span>'; return; }
-  for (const entry of entries) {
+  for (const r of recent) {
     const item = document.createElement('div');
-    item.className = 'sidebar-item ' + (entry.kind === 'directory' ? 'sidebar-folder' : 'sidebar-file');
-    const row = document.createElement('div'); row.className = 'sidebar-row';
-    if (entry.kind === 'directory') {
-      const icon = document.createElement('span'); icon.className = 'sidebar-icon'; icon.textContent = '▸';
-      const name = document.createElement('span'); name.className = 'sidebar-name'; name.textContent = entry.name;
-      row.appendChild(icon); row.appendChild(name);
-      const children = document.createElement('div'); children.className = 'sidebar-children';
-      item.appendChild(row); item.appendChild(children);
-      let loaded = false;
-      row.addEventListener('click', async e => {
-        e.stopPropagation();
-        const open = item.classList.toggle('open');
-        icon.textContent = open ? '▾' : '▸';
-        if (open && !loaded) { loaded = true; await renderLocalTree(entry.handle, children); }
-      });
-    } else {
-      const name = document.createElement('span'); name.className = 'sidebar-name'; name.textContent = entry.name;
-      row.appendChild(name);
-      item.appendChild(row);
-      row.addEventListener('click', () => openFromLocal(entry.handle, entry.name));
-    }
-    container.appendChild(item);
+    item.className = 'sidebar-item sidebar-file';
+    const row = document.createElement('div');
+    row.className = 'sidebar-row sidebar-recent-row';
+    const nameEl = document.createElement('span');
+    nameEl.className = 'sidebar-name';
+    nameEl.textContent = r.name;
+    const dateEl = document.createElement('span');
+    dateEl.className = 'sidebar-recent-date';
+    dateEl.textContent = formatRecentDate(r.at);
+    row.appendChild(nameEl);
+    row.appendChild(dateEl);
+    item.appendChild(row);
+    row.addEventListener('click', () => openFromDropbox(r.dbxPath, r.name));
+    root.appendChild(item);
   }
-}
-
-async function openFromLocal(handle, name) {
-  try {
-    const file    = await handle.getFile();
-    const content = await file.text();
-    saveActiveTabState();
-    const currentContent = getContent().trim();
-    if (currentContent === '' && !isDirty) {
-      const tab = getActiveTab();
-      if (tab) { tab.name = name; tab.content = content; tab.dirty = false; }
-      document.getElementById('filename-input').value = name;
-      fileHandle = null; isDirty = false;
-      setContent(content);
-    } else {
-      const id = createTab(name, content, null);
-      activeTabId = id;
-      document.getElementById('filename-input').value = name;
-      fileHandle = null; isDirty = false;
-      setContent(content);
-    }
-    renderTabs(); updateStats(); updateCursor(); renderPreview();
-    if (view) view.focus();
-  } catch(e) { typeStatusMessage('could not open file.'); }
-}
-
-// ── IndexedDB helpers (for storing directory handles) ──
-function idbOpen(dbName, storeName) {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(dbName, 1);
-    req.onupgradeneeded = e => e.target.result.createObjectStore(storeName);
-    req.onsuccess = e => resolve(e.target.result);
-    req.onerror   = e => reject(e.target.error);
-  });
-}
-
-async function idbPut(dbName, storeName, key, value) {
-  try {
-    const db = await idbOpen(dbName, storeName);
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(storeName, 'readwrite');
-      const req = tx.objectStore(storeName).put(value, key);
-      req.onsuccess = () => resolve();
-      req.onerror   = () => reject(req.error);
-    });
-  } catch(e) {}
-}
-
-async function idbGet(dbName, storeName, key) {
-  try {
-    const db = await idbOpen(dbName, storeName);
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(storeName, 'readonly');
-      const req = tx.objectStore(storeName).get(key);
-      req.onsuccess = () => resolve(req.result);
-      req.onerror   = () => reject(req.error);
-    });
-  } catch(e) { return null; }
 }
 
 // ── Library init ──
 async function initLibrary() {
-  // Handle Dropbox OAuth callback
-  if (window.location.search.includes('code=')) {
+  // Fallback: direct redirect (popup was blocked)
+  if (!window.opener && window.location.search.includes('code=')) {
     await dbxHandleCallback();
   }
-  // Load stored tokens
   dbxLoadTokens();
   renderSidebarDropbox();
-
-  // Restore local folder handle
-  const handle = await idbGet('tree-library', 'handles', 'localDir');
-  if (handle) {
-    try {
-      const perm = await handle.queryPermission({ mode: 'readwrite' });
-      localDirHandle = (perm === 'granted') ? handle : null;
-    } catch(e) { localDirHandle = null; }
-  }
-  renderSidebarLocal();
+  renderSidebarRecent();
 }
 
 document.getElementById('sidebar-toggle').addEventListener('click', toggleSidebar);
-document.getElementById('btn-local-folder').addEventListener('click', openLocalFolderPicker);
 
 // ── Init ──────────────────────────────────────────────────────────────
 function init() {
