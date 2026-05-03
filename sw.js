@@ -1,5 +1,5 @@
 const CACHE = 'tree-v1';
-const ASSETS = ['/tree/', '/tree/tree.html', '/tree/manifest.json'];
+const ASSETS = ['/tree/', '/tree/index.html', '/tree/manifest.json', '/tree/icon.svg'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
