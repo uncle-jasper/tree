@@ -1784,9 +1784,9 @@ document.getElementById('btn-autohide').addEventListener('click', () => {
     document.body.classList.remove('toolbar-hidden', 'toolbar-peek');
     document.body.classList.remove('tabbar-faded', 'show-pin');
   } else {
-    // Gracefully slide away after a brief pause
-    clearTimeout(autohideTimer);
-    autohideTimer = setTimeout(hideToolbar, 150);
+    // Let the mousemove handler take over — it'll start the hide timer
+    // once the mouse leaves the header. Starting one here causes a flicker
+    // because the mouse is still over the header right after clicking.
   }
   saveSettings();
 });
