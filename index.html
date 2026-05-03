@@ -860,11 +860,6 @@
   }
   .sidebar-item > .sidebar-row:hover .sidebar-remove-loc { opacity: 0.4; }
   .sidebar-remove-loc:hover { opacity: 1 !important; }
-  .sidebar-add-location {
-    padding: 4px 14px 4px 28px; font-size: 11px; opacity: 0.35;
-    cursor: pointer; user-select: none;
-  }
-  .sidebar-add-location:hover { opacity: 0.7; }
 
   /* ── Sidebar toggle strip ─────────────────────────────────────────── */
   #sidebar-toggle {
@@ -944,6 +939,7 @@
       <div id="sidebar-locations-section" class="sidebar-section">
         <div class="sidebar-section-header">
           <span class="sidebar-source-name">locations</span>
+          <button class="sidebar-connect" id="btn-add-location">+ add</button>
         </div>
         <div id="locations-root" class="sidebar-tree"></div>
       </div>
@@ -2695,6 +2691,7 @@ async function initLocations() {
     document.getElementById('sidebar-locations-section').style.display = 'none';
     return;
   }
+  document.getElementById('btn-add-location').addEventListener('click', addLocation);
   savedLocations = await idbLocGetAll();
   renderSidebarLocations();
 }
@@ -2740,11 +2737,9 @@ function renderSidebarLocations() {
     });
     root.appendChild(item);
   }
-  const addBtn = document.createElement('div');
-  addBtn.className = 'sidebar-add-location';
-  addBtn.textContent = savedLocations.length ? '+ add location' : '+ add location';
-  addBtn.addEventListener('click', addLocation);
-  root.appendChild(addBtn);
+  if (!savedLocations.length) {
+    root.innerHTML = '<span class="sidebar-empty">no locations added</span>';
+  }
 }
 
 async function renderLocationTree(dirHandle, container) {
