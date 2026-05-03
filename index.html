@@ -924,10 +924,6 @@
   <div id="sidebar">
     <div id="sidebar-inner">
       <div id="sidebar-header">library</div>
-      <div id="sidebar-dropbox-section" class="sidebar-section">
-        <div id="sidebar-dbx-header" class="sidebar-section-header"></div>
-        <div id="dbx-root" class="sidebar-tree"></div>
-      </div>
       <div id="sidebar-recent-section" class="sidebar-section">
         <div class="sidebar-section-header">
           <span class="sidebar-source-name">recent</span>
@@ -2106,6 +2102,7 @@ document.getElementById('file-open').addEventListener('change', function() {
       fileHandle = null;
       isDirty = false;
     }
+    addToRecent(f.name, text);
     renderTabs();
     updateStats();
     updateCursor();
@@ -2119,20 +2116,12 @@ async function saveFile() {
   const fname   = document.getElementById('filename-input').value || 'untitled.md';
   const content = getContent();
 
-  // Save back to Dropbox if this tab came from there
-  const activeTab = getActiveTab();
-  if (activeTab && activeTab.dbxPath) {
-    const ok = await dbxUpload(activeTab.dbxPath, content);
-    if (ok) { flashSaved(); markClean(); }
-    else typeStatusMessage('dropbox save failed.');
-    return;
-  }
-
   if (fileHandle) {
     try {
       const writable = await fileHandle.createWritable();
       await writable.write(content);
       await writable.close();
+      addToRecent(fname, content);
       flashSaved();
       markClean();
       return;
@@ -2151,6 +2140,7 @@ async function saveFile() {
       const writable = await fileHandle.createWritable();
       await writable.write(content);
       await writable.close();
+      addToRecent(fileHandle.name, content);
       flashSaved();
       markClean();
       renderTabs();
@@ -2158,7 +2148,7 @@ async function saveFile() {
     } catch(e) { if (e.name !== 'AbortError') console.error(e); return; }
   }
 
-  // Fallback: download
+  // Fallback: trigger browser download
   const blob = new Blob([content], { type: 'text/plain' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
@@ -2166,6 +2156,7 @@ async function saveFile() {
   a.download = fname;
   a.click();
   URL.revokeObjectURL(url);
+  addToRecent(fname, content);
   flashSaved();
   markClean();
 }
@@ -2608,304 +2599,29 @@ function openReadmeTab() {
 
 // (README link is in About modal)
 
-// ── Library (Dropbox + Local folder) ──────────────────────────────────
-
-const DBX_CLIENT_ID = 'e604yzhdky4em5y';
-const DBX_REDIRECT  = 'https://uncle-jasper.github.io/tree/';
-const DBX_AUTH_URL  = 'https://www.dropbox.com/oauth2/authorize';
-const DBX_TOKEN_URL = 'https://api.dropboxapi.com/oauth2/token';
-const DBX_API       = 'https://api.dropboxapi.com/2';
-const DBX_CONTENT   = 'https://content.dropboxapi.com/2';
+// ── Library ────────────────────────────────────────────────────────────
 
 let sidebarOpen    = false;
-let dbxAccessToken = null;
-let dbxRefreshToken= null;
-let dbxExpiry      = 0;
-// ── PKCE helpers ──
-function dbxRandomString(n) {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
-  const arr = new Uint8Array(n);
-  crypto.getRandomValues(arr);
-  return Array.from(arr, b => chars[b % chars.length]).join('');
-}
 
-async function dbxPkceChallenge(verifier) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
-  return btoa(String.fromCharCode(...new Uint8Array(buf)))
-    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-}
-
-// ── Dropbox auth ──
-async function dbxConnect() {
-  const verifier  = dbxRandomString(64);
-  const challenge = await dbxPkceChallenge(verifier);
-  try { localStorage.setItem('tree-dbx-verifier', verifier); } catch(e) {}
-  const params = new URLSearchParams({
-    client_id:             DBX_CLIENT_ID,
-    response_type:         'code',
-    code_challenge:        challenge,
-    code_challenge_method: 'S256',
-    redirect_uri:          DBX_REDIRECT,
-    token_access_type:     'offline',
-  });
-  const authUrl = DBX_AUTH_URL + '?' + params;
-  // Open in a popup so the token exchange happens in the PWA's own localStorage context.
-  // If the popup is blocked, fall back to a full redirect.
-  const popup = window.open(authUrl, 'dbx-auth', 'width=640,height=720,left=200,top=100');
-  if (!popup) { window.location.href = authUrl; return; }
-  window.addEventListener('message', function onDbxMsg(e) {
-    if (e.origin !== window.location.origin) return;
-    if (!e.data || e.data.type !== 'dbx-code') return;
-    window.removeEventListener('message', onDbxMsg);
-    dbxExchangeCode(e.data.code);
-  });
-}
-
-async function dbxHandleCallback() {
-  const params   = new URLSearchParams(window.location.search);
-  const code     = params.get('code');
-  if (!code) return;
-  history.replaceState({}, '', window.location.pathname);
-  let verifier = '';
-  try { verifier = localStorage.getItem('tree-dbx-verifier') || ''; } catch(e) {}
-  const body = new URLSearchParams({
-    code,
-    grant_type:    'authorization_code',
-    client_id:     DBX_CLIENT_ID,
-    redirect_uri:  DBX_REDIRECT,
-    code_verifier: verifier,
-  });
-  try {
-    const res  = await fetch(DBX_TOKEN_URL, { method: 'POST', body });
-    const data = await res.json();
-    if (data.access_token) {
-      dbxSaveTokens(data.access_token, data.refresh_token, data.expires_in || 14400);
-      try { localStorage.removeItem('tree-dbx-verifier'); } catch(e) {}
-      const acct = await dbxApiCall('/users/get_current_account', null, true);
-      if (acct && acct.name) {
-        try { localStorage.setItem('tree-dbx-name', acct.name.display_name); } catch(e) {}
-      }
-      if (document.getElementById('chk-welcome').checked) typeStatusMessage('dropbox connected.');
-    }
-  } catch(e) { console.error('Dropbox auth error:', e); }
-  renderSidebarDropbox();
-}
-
-async function dbxExchangeCode(code) {
-  let verifier = '';
-  try { verifier = localStorage.getItem('tree-dbx-verifier') || ''; } catch(e) {}
-  history.replaceState({}, '', window.location.pathname);
-  const body = new URLSearchParams({
-    code,
-    grant_type:    'authorization_code',
-    client_id:     DBX_CLIENT_ID,
-    redirect_uri:  DBX_REDIRECT,
-    code_verifier: verifier,
-  });
-  try {
-    const res  = await fetch(DBX_TOKEN_URL, { method: 'POST', body });
-    const data = await res.json();
-    if (data.access_token) {
-      dbxSaveTokens(data.access_token, data.refresh_token, data.expires_in || 14400);
-      try { localStorage.removeItem('tree-dbx-verifier'); } catch(e) {}
-      const acct = await dbxApiCall('/users/get_current_account', null, true);
-      if (acct && acct.name) {
-        try { localStorage.setItem('tree-dbx-name', acct.name.display_name); } catch(e) {}
-      }
-      if (document.getElementById('chk-welcome').checked) typeStatusMessage('dropbox connected.');
-    }
-  } catch(e) { console.error('Dropbox auth error:', e); }
-  renderSidebarDropbox();
-}
-
-function dbxSaveTokens(access, refresh, expiresIn) {
-  dbxAccessToken  = access;
-  if (refresh) dbxRefreshToken = refresh;
-  dbxExpiry = Date.now() + (expiresIn - 60) * 1000;
-  try {
-    localStorage.setItem('tree-dbx-access',  access);
-    if (refresh) localStorage.setItem('tree-dbx-refresh', refresh);
-    localStorage.setItem('tree-dbx-expiry',  String(dbxExpiry));
-  } catch(e) {}
-}
-
-function dbxLoadTokens() {
-  try {
-    dbxAccessToken  = localStorage.getItem('tree-dbx-access')  || null;
-    dbxRefreshToken = localStorage.getItem('tree-dbx-refresh') || null;
-    dbxExpiry       = parseInt(localStorage.getItem('tree-dbx-expiry') || '0', 10);
-  } catch(e) {}
-}
-
-async function dbxEnsureToken() {
-  if (!dbxAccessToken) return false;
-  if (Date.now() < dbxExpiry) return true;
-  if (!dbxRefreshToken) return false;
-  const body = new URLSearchParams({
-    grant_type:    'refresh_token',
-    refresh_token: dbxRefreshToken,
-    client_id:     DBX_CLIENT_ID,
-  });
-  try {
-    const res  = await fetch(DBX_TOKEN_URL, { method: 'POST', body });
-    const data = await res.json();
-    if (data.access_token) { dbxSaveTokens(data.access_token, data.refresh_token, data.expires_in || 14400); return true; }
-  } catch(e) {}
-  return false;
-}
-
-async function dbxApiCall(endpoint, bodyObj, noBody) {
-  if (!await dbxEnsureToken()) return null;
-  const opts = {
-    method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + dbxAccessToken, 'Content-Type': 'application/json' },
-  };
-  if (!noBody) opts.body = JSON.stringify(bodyObj || {});
-  try {
-    const res = await fetch(DBX_API + endpoint, opts);
-    return res.ok ? res.json() : null;
-  } catch(e) { return null; }
-}
-
-async function dbxListFolder(path) {
-  const data = await dbxApiCall('/files/list_folder', { path: path || '', recursive: false });
-  if (!data || !data.entries) return [];
-  return data.entries
-    .filter(e => e['.tag'] === 'folder' || (e['.tag'] === 'file' && /\.(md|txt)$/i.test(e.name)))
-    .sort((a, b) => {
-      if (a['.tag'] !== b['.tag']) return a['.tag'] === 'folder' ? -1 : 1;
-      return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
-    });
-}
-
-async function dbxDownload(path) {
-  if (!await dbxEnsureToken()) return null;
-  try {
-    const res = await fetch(DBX_CONTENT + '/files/download', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + dbxAccessToken, 'Dropbox-API-Arg': JSON.stringify({ path }) },
-    });
-    return res.ok ? res.text() : null;
-  } catch(e) { return null; }
-}
-
-async function dbxUpload(path, content) {
-  if (!await dbxEnsureToken()) return false;
-  try {
-    const res = await fetch(DBX_CONTENT + '/files/upload', {
-      method: 'POST',
-      headers: {
-        'Authorization':   'Bearer ' + dbxAccessToken,
-        'Dropbox-API-Arg': JSON.stringify({ path, mode: 'overwrite', autorename: false }),
-        'Content-Type':    'application/octet-stream',
-      },
-      body: content,
-    });
-    return res.ok;
-  } catch(e) { return false; }
-}
-
-function dbxDisconnect() {
-  dbxAccessToken = dbxRefreshToken = null; dbxExpiry = 0;
-  try { ['tree-dbx-access','tree-dbx-refresh','tree-dbx-expiry','tree-dbx-name','tree-dbx-verifier'].forEach(k => localStorage.removeItem(k)); } catch(e) {}
-  renderSidebarDropbox();
-}
-
-// ── Sidebar render ──
+// ── Sidebar ──
 function toggleSidebar() {
   sidebarOpen = !sidebarOpen;
   document.body.classList.toggle('sidebar-open', sidebarOpen);
   document.getElementById('sidebar-toggle').textContent = sidebarOpen ? '‹' : '›';
   if (sidebarOpen) {
-    if (dbxAccessToken) renderDropboxTree('', document.getElementById('dbx-root'));
     renderSidebarRecent();
   }
-}
-
-function renderSidebarDropbox() {
-  const hdr  = document.getElementById('sidebar-dbx-header');
-  const root = document.getElementById('dbx-root');
-  if (dbxAccessToken) {
-    let name = 'dropbox';
-    try { name = localStorage.getItem('tree-dbx-name') || 'dropbox'; } catch(e) {}
-    hdr.innerHTML = `<span class="sidebar-source-name" title="${name}">${name}</span><button class="sidebar-disconnect" onclick="dbxDisconnect()">disconnect</button>`;
-    if (sidebarOpen) renderDropboxTree('', root);
-  } else {
-    hdr.innerHTML = `<button class="sidebar-connect" onclick="dbxConnect()">connect dropbox</button>`;
-    root.innerHTML = '';
-  }
-}
-
-async function renderDropboxTree(path, container) {
-  container.innerHTML = '<span class="sidebar-loading">loading…</span>';
-  const entries = await dbxListFolder(path);
-  container.innerHTML = '';
-  if (!entries.length) { container.innerHTML = '<span class="sidebar-empty">empty</span>'; return; }
-  for (const entry of entries) {
-    const item = document.createElement('div');
-    item.className = 'sidebar-item ' + (entry['.tag'] === 'folder' ? 'sidebar-folder' : 'sidebar-file');
-    const row = document.createElement('div');
-    row.className = 'sidebar-row';
-    if (entry['.tag'] === 'folder') {
-      const icon = document.createElement('span'); icon.className = 'sidebar-icon'; icon.textContent = '▸';
-      const name = document.createElement('span'); name.className = 'sidebar-name'; name.textContent = entry.name;
-      row.appendChild(icon); row.appendChild(name);
-      const children = document.createElement('div'); children.className = 'sidebar-children';
-      item.appendChild(row); item.appendChild(children);
-      let loaded = false;
-      row.addEventListener('click', async e => {
-        e.stopPropagation();
-        const open = item.classList.toggle('open');
-        icon.textContent = open ? '▾' : '▸';
-        if (open && !loaded) { loaded = true; await renderDropboxTree(entry.path_lower, children); }
-      });
-    } else {
-      const name = document.createElement('span'); name.className = 'sidebar-name'; name.textContent = entry.name;
-      row.appendChild(name);
-      item.appendChild(row);
-      row.addEventListener('click', () => openFromDropbox(entry.path_lower, entry.name));
-    }
-    container.appendChild(item);
-  }
-}
-
-async function openFromDropbox(path, name) {
-  typeStatusMessage('opening…');
-  const content = await dbxDownload(path);
-  if (content === null) { typeStatusMessage('could not load file.'); return; }
-  saveActiveTabState();
-  const currentContent = getContent().trim();
-  let tabId;
-  if (currentContent === '' && !isDirty) {
-    tabId = activeTabId;
-    const tab = getActiveTab();
-    if (tab) { tab.name = name; tab.content = content; tab.dirty = false; tab.dbxPath = path; }
-    document.getElementById('filename-input').value = name;
-    fileHandle = null; isDirty = false;
-    setContent(content);
-  } else {
-    tabId = createTab(name, content, null);
-    activeTabId = tabId;
-    const tab = getActiveTab();
-    if (tab) { tab.dbxPath = path; }
-    document.getElementById('filename-input').value = name;
-    fileHandle = null; isDirty = false;
-    setContent(content);
-  }
-  addToRecent(name, path);
-  renderTabs(); updateStats(); updateCursor(); renderPreview();
-  if (view) view.focus();
 }
 
 // ── Recent files ──────────────────────────────────────────────────────
 const RECENT_KEY = 'tree-recent';
 const RECENT_MAX = 10;
 
-function addToRecent(name, dbxPath) {
+function addToRecent(name, content) {
   let recent = [];
   try { recent = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch(e) {}
-  recent = recent.filter(r => r.dbxPath !== dbxPath);
-  recent.unshift({ name, dbxPath, at: new Date().toISOString() });
+  recent = recent.filter(r => r.name !== name);
+  recent.unshift({ name, content, at: new Date().toISOString() });
   if (recent.length > RECENT_MAX) recent = recent.slice(0, RECENT_MAX);
   try { localStorage.setItem(RECENT_KEY, JSON.stringify(recent)); } catch(e) {}
   renderSidebarRecent();
@@ -2946,19 +2662,32 @@ function renderSidebarRecent() {
     row.appendChild(nameEl);
     row.appendChild(dateEl);
     item.appendChild(row);
-    row.addEventListener('click', () => openFromDropbox(r.dbxPath, r.name));
+    row.addEventListener('click', () => openFromRecent(r));
     root.appendChild(item);
   }
 }
 
-// ── Library init ──
-async function initLibrary() {
-  // Fallback: direct redirect (popup was blocked)
-  if (!window.opener && window.location.search.includes('code=')) {
-    await dbxHandleCallback();
+function openFromRecent(r) {
+  saveActiveTabState();
+  if (getContent().trim() === '' && !isDirty) {
+    const tab = getActiveTab();
+    if (tab) { tab.name = r.name; tab.dirty = false; }
+    document.getElementById('filename-input').value = r.name;
+    fileHandle = null; isDirty = false;
+    setContent(r.content);
+  } else {
+    const id = createTab(r.name, r.content, null);
+    activeTabId = id;
+    document.getElementById('filename-input').value = r.name;
+    fileHandle = null; isDirty = false;
+    setContent(r.content);
   }
-  dbxLoadTokens();
-  renderSidebarDropbox();
+  renderTabs(); updateStats(); updateCursor(); renderPreview();
+  if (view) view.focus();
+}
+
+// ── Library init ──
+function initLibrary() {
   renderSidebarRecent();
 }
 
@@ -3053,23 +2782,14 @@ function init() {
   // Focus editor
   setTimeout(() => { if (view) view.focus(); }, 50);
 
-  // Library (Dropbox + local folder)
+  // Library (recent files)
   initLibrary();
 }
 
 // Flush autosave synchronously when the window closes, regardless of debounce timer
 window.addEventListener('beforeunload', () => { autosave(); });
 
-// If this page loaded inside an OAuth popup (window.opener exists + code param present),
-// relay the code back to the PWA and close — do NOT run init().
-const _oauthCode = new URLSearchParams(window.location.search).get('code');
-if (_oauthCode && window.opener) {
-  try { window.opener.postMessage({ type: 'dbx-code', code: _oauthCode }, window.location.origin); } catch(e) {}
-  history.replaceState({}, '', window.location.pathname);
-  setTimeout(() => window.close(), 300);
-} else {
-  init();
-}
+init();
 </script>
 </body>
 </html>
