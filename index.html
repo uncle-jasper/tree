@@ -685,22 +685,18 @@
   .cm-syntax-dim { opacity: 0.2; transition: opacity 0.1s; }
 
   /* ── Inline markdown formatting ── */
-  .cm-tree-h1 { font-weight: 700; font-size: 1.35em; }
-  .cm-tree-h2 { font-weight: 700; font-size: 1.2em; }
-  .cm-tree-h3 { font-weight: 700; font-size: 1.05em; }
-  .cm-tree-h4, .cm-tree-h5 { font-weight: 600; }
-  .cm-tree-h6 { font-weight: 600; opacity: 0.8; }
+  .cm-tree-h1, .cm-tree-h2, .cm-tree-h3,
+  .cm-tree-h4, .cm-tree-h5, .cm-tree-h6 { font-weight: 700; }
   .cm-tree-strong { font-weight: 700; -webkit-text-stroke: 0.4px currentColor; }
   .cm-tree-em { font-style: italic; }
 
   /* ── Heading outdent: # hangs into left margin ── */
-  /* Values account for larger font sizes so heading text stays near body-text left edge */
-  .cm-line.cm-tree-h-line-1 { text-indent: -2.5ch; }
-  .cm-line.cm-tree-h-line-2 { text-indent: -3.5ch; }
-  .cm-line.cm-tree-h-line-3 { text-indent: -4ch;   }
-  .cm-line.cm-tree-h-line-4 { text-indent: -5ch;   }
-  .cm-line.cm-tree-h-line-5 { text-indent: -6ch;   }
-  .cm-line.cm-tree-h-line-6 { text-indent: -7ch;   }
+  .cm-line.cm-tree-h-line-1 { text-indent: -2ch; }
+  .cm-line.cm-tree-h-line-2 { text-indent: -3ch; }
+  .cm-line.cm-tree-h-line-3 { text-indent: -4ch; }
+  .cm-line.cm-tree-h-line-4 { text-indent: -5ch; }
+  .cm-line.cm-tree-h-line-5 { text-indent: -6ch; }
+  .cm-line.cm-tree-h-line-6 { text-indent: -7ch; }
   /* ── List indent ── */
   .cm-line.cm-tree-list-line { padding-left: 1.5ch !important; }
 
@@ -847,7 +843,28 @@
     font-style: italic;
   }
   .sidebar-recent-row { justify-content: space-between; overflow: hidden; }
-  .sidebar-recent-date { font-size: 10px; opacity: 0.4; flex-shrink: 0; margin-left: 6px; }
+  .sidebar-recent-right { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+  .sidebar-recent-date { font-size: 10px; opacity: 0.4; }
+  .sidebar-star {
+    background: none; border: none; font-size: 11px; line-height: 1;
+    cursor: pointer; opacity: 0.25; padding: 0 2px; color: inherit;
+    font-family: inherit; flex-shrink: 0;
+  }
+  .sidebar-star:hover, .sidebar-star.active { opacity: 1; }
+  .sidebar-fav-row { justify-content: space-between; overflow: hidden; }
+  .sidebar-loc-row { justify-content: space-between; overflow: hidden; }
+  .sidebar-remove-loc {
+    background: none; border: none; font-size: 13px; line-height: 1;
+    cursor: pointer; opacity: 0; padding: 0 2px; color: inherit;
+    font-family: inherit; flex-shrink: 0;
+  }
+  .sidebar-item > .sidebar-row:hover .sidebar-remove-loc { opacity: 0.4; }
+  .sidebar-remove-loc:hover { opacity: 1 !important; }
+  .sidebar-add-location {
+    padding: 4px 14px 4px 28px; font-size: 11px; opacity: 0.35;
+    cursor: pointer; user-select: none;
+  }
+  .sidebar-add-location:hover { opacity: 0.7; }
 
   /* ── Sidebar toggle strip ─────────────────────────────────────────── */
   #sidebar-toggle {
@@ -924,6 +941,18 @@
   <div id="sidebar">
     <div id="sidebar-inner">
       <div id="sidebar-header">library</div>
+      <div id="sidebar-locations-section" class="sidebar-section">
+        <div class="sidebar-section-header">
+          <span class="sidebar-source-name">locations</span>
+        </div>
+        <div id="locations-root" class="sidebar-tree"></div>
+      </div>
+      <div id="sidebar-favorites-section" class="sidebar-section">
+        <div class="sidebar-section-header">
+          <span class="sidebar-source-name">favorites</span>
+        </div>
+        <div id="favorites-root" class="sidebar-tree"></div>
+      </div>
       <div id="sidebar-recent-section" class="sidebar-section">
         <div class="sidebar-section-header">
           <span class="sidebar-source-name">recent</span>
@@ -2609,7 +2638,244 @@ function toggleSidebar() {
   document.body.classList.toggle('sidebar-open', sidebarOpen);
   document.getElementById('sidebar-toggle').textContent = sidebarOpen ? '‹' : '›';
   if (sidebarOpen) {
+    renderSidebarLocations();
+    renderSidebarFavorites();
     renderSidebarRecent();
+  }
+}
+
+// ── Locations (File System Access API) ────────────────────────────────
+let savedLocations = [];
+
+function idbFsOpen() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('tree-fs', 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore('locations', { keyPath: 'id' });
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror = e => reject(e.target.error);
+  });
+}
+
+async function idbLocSave(loc) {
+  try {
+    const db = await idbFsOpen();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction('locations', 'readwrite');
+      tx.objectStore('locations').put(loc);
+      tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
+    });
+  } catch(e) {}
+}
+
+async function idbLocGetAll() {
+  try {
+    const db = await idbFsOpen();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction('locations', 'readonly');
+      const req = tx.objectStore('locations').getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  } catch(e) { return []; }
+}
+
+async function idbLocDelete(id) {
+  try {
+    const db = await idbFsOpen();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction('locations', 'readwrite');
+      tx.objectStore('locations').delete(id);
+      tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
+    });
+  } catch(e) {}
+}
+
+async function initLocations() {
+  if (!('showDirectoryPicker' in window)) {
+    document.getElementById('sidebar-locations-section').style.display = 'none';
+    return;
+  }
+  savedLocations = await idbLocGetAll();
+  renderSidebarLocations();
+}
+
+async function addLocation() {
+  let handle;
+  try { handle = await window.showDirectoryPicker({ mode: 'readwrite' }); }
+  catch(e) { return; }
+  const loc = { id: Date.now(), name: handle.name, handle };
+  await idbLocSave(loc);
+  savedLocations.push(loc);
+  renderSidebarLocations();
+}
+
+async function removeLocation(id) {
+  await idbLocDelete(id);
+  savedLocations = savedLocations.filter(l => l.id !== id);
+  renderSidebarLocations();
+}
+
+function renderSidebarLocations() {
+  const root = document.getElementById('locations-root');
+  root.innerHTML = '';
+  for (const loc of savedLocations) {
+    const item = document.createElement('div');
+    item.className = 'sidebar-item sidebar-folder';
+    const row = document.createElement('div');
+    row.className = 'sidebar-row sidebar-loc-row';
+    const icon = document.createElement('span'); icon.className = 'sidebar-icon'; icon.textContent = '▸';
+    const nameEl = document.createElement('span'); nameEl.className = 'sidebar-name'; nameEl.textContent = loc.name;
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'sidebar-remove-loc'; removeBtn.textContent = '×'; removeBtn.title = 'Remove location';
+    removeBtn.addEventListener('click', e => { e.stopPropagation(); removeLocation(loc.id); });
+    row.appendChild(icon); row.appendChild(nameEl); row.appendChild(removeBtn);
+    const children = document.createElement('div'); children.className = 'sidebar-children';
+    item.appendChild(row); item.appendChild(children);
+    row.addEventListener('click', async e => {
+      e.stopPropagation();
+      const open = item.classList.toggle('open');
+      icon.textContent = open ? '▾' : '▸';
+      if (open) await renderLocationTree(loc.handle, children);
+      else children.innerHTML = '';
+    });
+    root.appendChild(item);
+  }
+  const addBtn = document.createElement('div');
+  addBtn.className = 'sidebar-add-location';
+  addBtn.textContent = savedLocations.length ? '+ add location' : '+ add location';
+  addBtn.addEventListener('click', addLocation);
+  root.appendChild(addBtn);
+}
+
+async function renderLocationTree(dirHandle, container) {
+  container.innerHTML = '<span class="sidebar-loading">loading…</span>';
+  try {
+    let perm = await dirHandle.queryPermission({ mode: 'readwrite' });
+    if (perm === 'prompt') perm = await dirHandle.requestPermission({ mode: 'readwrite' });
+    if (perm !== 'granted') { container.innerHTML = '<span class="sidebar-empty">permission denied</span>'; return; }
+  } catch(e) { container.innerHTML = '<span class="sidebar-empty">access error</span>'; return; }
+  const entries = [];
+  try {
+    for await (const [name, handle] of dirHandle.entries()) {
+      if (handle.kind === 'directory') entries.push({ name, handle, kind: 'directory' });
+      else if (/\.(md|txt)$/i.test(name)) entries.push({ name, handle, kind: 'file' });
+    }
+  } catch(e) { container.innerHTML = '<span class="sidebar-empty">could not read folder</span>'; return; }
+  entries.sort((a, b) => {
+    if (a.kind !== b.kind) return a.kind === 'directory' ? -1 : 1;
+    return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+  });
+  container.innerHTML = '';
+  if (!entries.length) { container.innerHTML = '<span class="sidebar-empty">empty</span>'; return; }
+  for (const entry of entries) {
+    const item = document.createElement('div');
+    item.className = 'sidebar-item ' + (entry.kind === 'directory' ? 'sidebar-folder' : 'sidebar-file');
+    const row = document.createElement('div'); row.className = 'sidebar-row';
+    if (entry.kind === 'directory') {
+      const icon = document.createElement('span'); icon.className = 'sidebar-icon'; icon.textContent = '▸';
+      const nameEl = document.createElement('span'); nameEl.className = 'sidebar-name'; nameEl.textContent = entry.name;
+      row.appendChild(icon); row.appendChild(nameEl);
+      const children = document.createElement('div'); children.className = 'sidebar-children';
+      item.appendChild(row); item.appendChild(children);
+      row.addEventListener('click', async e => {
+        e.stopPropagation();
+        const open = item.classList.toggle('open');
+        icon.textContent = open ? '▾' : '▸';
+        if (open) await renderLocationTree(entry.handle, children);
+        else children.innerHTML = '';
+      });
+    } else {
+      const nameEl = document.createElement('span'); nameEl.className = 'sidebar-name'; nameEl.textContent = entry.name;
+      row.appendChild(nameEl); item.appendChild(row);
+      row.addEventListener('click', () => openFromLocation(entry.handle, entry.name));
+    }
+    container.appendChild(item);
+  }
+}
+
+async function openFromLocation(handle, name) {
+  let content;
+  try { const file = await handle.getFile(); content = await file.text(); }
+  catch(e) { typeStatusMessage('could not open file.'); return; }
+  addToRecent(name, content);
+  saveActiveTabState();
+  if (getContent().trim() === '' && !isDirty) {
+    const tab = getActiveTab();
+    if (tab) { tab.name = name; tab.dirty = false; }
+    document.getElementById('filename-input').value = name;
+    fileHandle = handle; isDirty = false;
+    setContent(content);
+  } else {
+    const id = createTab(name, content, null);
+    activeTabId = id;
+    document.getElementById('filename-input').value = name;
+    fileHandle = handle; isDirty = false;
+    setContent(content);
+  }
+  renderTabs(); updateStats(); updateCursor(); renderPreview();
+  if (view) view.focus();
+}
+
+// ── Favorites ─────────────────────────────────────────────────────────
+const FAVORITES_KEY = 'tree-favorites';
+
+function getFavorites() {
+  try { return JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]'); } catch(e) { return []; }
+}
+
+function isFavorited(name) {
+  return getFavorites().some(f => f.name === name);
+}
+
+function addToFavorites(name, content) {
+  const favs = getFavorites().filter(f => f.name !== name);
+  favs.unshift({ name, content });
+  try { localStorage.setItem(FAVORITES_KEY, JSON.stringify(favs)); } catch(e) {}
+  renderSidebarFavorites();
+  renderSidebarRecent();
+}
+
+function removeFromFavorites(name) {
+  const favs = getFavorites().filter(f => f.name !== name);
+  try { localStorage.setItem(FAVORITES_KEY, JSON.stringify(favs)); } catch(e) {}
+  renderSidebarFavorites();
+  renderSidebarRecent();
+}
+
+function syncFavoriteContent(name, content) {
+  const favs = getFavorites();
+  const idx = favs.findIndex(f => f.name === name);
+  if (idx === -1) return;
+  favs[idx].content = content;
+  try { localStorage.setItem(FAVORITES_KEY, JSON.stringify(favs)); } catch(e) {}
+}
+
+function renderSidebarFavorites() {
+  const root = document.getElementById('favorites-root');
+  const favs = getFavorites();
+  root.innerHTML = '';
+  if (!favs.length) {
+    root.innerHTML = '<span class="sidebar-empty">star a file to pin it here</span>';
+    return;
+  }
+  for (const f of favs) {
+    const item = document.createElement('div');
+    item.className = 'sidebar-item sidebar-file';
+    const row = document.createElement('div');
+    row.className = 'sidebar-row sidebar-fav-row';
+    const nameEl = document.createElement('span');
+    nameEl.className = 'sidebar-name';
+    nameEl.textContent = f.name;
+    const unpinBtn = document.createElement('button');
+    unpinBtn.className = 'sidebar-star active';
+    unpinBtn.textContent = '★';
+    unpinBtn.title = 'Remove from favorites';
+    unpinBtn.addEventListener('click', e => { e.stopPropagation(); removeFromFavorites(f.name); });
+    row.appendChild(nameEl);
+    row.appendChild(unpinBtn);
+    item.appendChild(row);
+    row.addEventListener('click', () => openFromRecent(f));
+    root.appendChild(item);
   }
 }
 
@@ -2624,6 +2890,8 @@ function addToRecent(name, content) {
   recent.unshift({ name, content, at: new Date().toISOString() });
   if (recent.length > RECENT_MAX) recent = recent.slice(0, RECENT_MAX);
   try { localStorage.setItem(RECENT_KEY, JSON.stringify(recent)); } catch(e) {}
+  syncFavoriteContent(name, content);
+  renderSidebarFavorites();
   renderSidebarRecent();
 }
 
@@ -2656,11 +2924,25 @@ function renderSidebarRecent() {
     const nameEl = document.createElement('span');
     nameEl.className = 'sidebar-name';
     nameEl.textContent = r.name;
+    const right = document.createElement('span');
+    right.className = 'sidebar-recent-right';
     const dateEl = document.createElement('span');
     dateEl.className = 'sidebar-recent-date';
     dateEl.textContent = formatRecentDate(r.at);
+    const starBtn = document.createElement('button');
+    const starred = isFavorited(r.name);
+    starBtn.className = 'sidebar-star' + (starred ? ' active' : '');
+    starBtn.textContent = starred ? '★' : '☆';
+    starBtn.title = starred ? 'Remove from favorites' : 'Add to favorites';
+    starBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      if (isFavorited(r.name)) removeFromFavorites(r.name);
+      else addToFavorites(r.name, r.content);
+    });
+    right.appendChild(dateEl);
+    right.appendChild(starBtn);
     row.appendChild(nameEl);
-    row.appendChild(dateEl);
+    row.appendChild(right);
     item.appendChild(row);
     row.addEventListener('click', () => openFromRecent(r));
     root.appendChild(item);
@@ -2687,7 +2969,9 @@ function openFromRecent(r) {
 }
 
 // ── Library init ──
-function initLibrary() {
+async function initLibrary() {
+  await initLocations();
+  renderSidebarFavorites();
   renderSidebarRecent();
 }
 
