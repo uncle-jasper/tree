@@ -2650,7 +2650,17 @@ async function dbxConnect() {
     redirect_uri:          DBX_REDIRECT,
     token_access_type:     'offline',
   });
-  window.location.href = DBX_AUTH_URL + '?' + params;
+  const authUrl = DBX_AUTH_URL + '?' + params;
+  // Open in a popup so the token exchange happens in the PWA's own localStorage context.
+  // If the popup is blocked, fall back to a full redirect.
+  const popup = window.open(authUrl, 'dbx-auth', 'width=640,height=720,left=200,top=100');
+  if (!popup) { window.location.href = authUrl; return; }
+  window.addEventListener('message', function onDbxMsg(e) {
+    if (e.origin !== window.location.origin) return;
+    if (!e.data || e.data.type !== 'dbx-code') return;
+    window.removeEventListener('message', onDbxMsg);
+    dbxExchangeCode(e.data.code);
+  });
 }
 
 async function dbxHandleCallback() {
@@ -2660,6 +2670,33 @@ async function dbxHandleCallback() {
   history.replaceState({}, '', window.location.pathname);
   let verifier = '';
   try { verifier = localStorage.getItem('tree-dbx-verifier') || ''; } catch(e) {}
+  const body = new URLSearchParams({
+    code,
+    grant_type:    'authorization_code',
+    client_id:     DBX_CLIENT_ID,
+    redirect_uri:  DBX_REDIRECT,
+    code_verifier: verifier,
+  });
+  try {
+    const res  = await fetch(DBX_TOKEN_URL, { method: 'POST', body });
+    const data = await res.json();
+    if (data.access_token) {
+      dbxSaveTokens(data.access_token, data.refresh_token, data.expires_in || 14400);
+      try { localStorage.removeItem('tree-dbx-verifier'); } catch(e) {}
+      const acct = await dbxApiCall('/users/get_current_account', null, true);
+      if (acct && acct.name) {
+        try { localStorage.setItem('tree-dbx-name', acct.name.display_name); } catch(e) {}
+      }
+      if (document.getElementById('chk-welcome').checked) typeStatusMessage('dropbox connected.');
+    }
+  } catch(e) { console.error('Dropbox auth error:', e); }
+  renderSidebarDropbox();
+}
+
+async function dbxExchangeCode(code) {
+  let verifier = '';
+  try { verifier = localStorage.getItem('tree-dbx-verifier') || ''; } catch(e) {}
+  history.replaceState({}, '', window.location.pathname);
   const body = new URLSearchParams({
     code,
     grant_type:    'authorization_code',
@@ -3108,7 +3145,16 @@ function init() {
 // Flush autosave synchronously when the window closes, regardless of debounce timer
 window.addEventListener('beforeunload', () => { autosave(); });
 
-init();
+// If this page loaded inside an OAuth popup (window.opener exists + code param present),
+// relay the code back to the PWA and close — do NOT run init().
+const _oauthCode = new URLSearchParams(window.location.search).get('code');
+if (_oauthCode && window.opener) {
+  try { window.opener.postMessage({ type: 'dbx-code', code: _oauthCode }, window.location.origin); } catch(e) {}
+  history.replaceState({}, '', window.location.pathname);
+  setTimeout(() => window.close(), 300);
+} else {
+  init();
+}
 </script>
 </body>
 </html>
