@@ -1396,12 +1396,12 @@ function buildExtensions() {
       '&.cm-focused .cm-selectionBackground': { background: 'var(--accent) !important', opacity: '0.25' },
       '.cm-line span': { textDecoration: 'none' },
       '.cm-line span.cm-tree-strike': { textDecoration: 'line-through' },
-      '.cm-tree-h1': { fontWeight: '700', fontSize: '1.35em' },
-      '.cm-tree-h2': { fontWeight: '700', fontSize: '1.2em' },
-      '.cm-tree-h3': { fontWeight: '700', fontSize: '1.05em' },
-      '.cm-tree-h4': { fontWeight: '600' },
-      '.cm-tree-h5': { fontWeight: '600' },
-      '.cm-tree-h6': { fontWeight: '600', opacity: '0.8' },
+      '.cm-tree-h1': { fontWeight: '700' },
+      '.cm-tree-h2': { fontWeight: '700' },
+      '.cm-tree-h3': { fontWeight: '700' },
+      '.cm-tree-h4': { fontWeight: '700' },
+      '.cm-tree-h5': { fontWeight: '700' },
+      '.cm-tree-h6': { fontWeight: '700' },
       '.cm-tree-strong': { fontWeight: '700', WebkitTextStroke: '0.4px currentColor' },
       '.cm-tree-em': { fontStyle: 'italic' },
     }),
@@ -2688,7 +2688,8 @@ async function idbLocDelete(id) {
 
 async function initLocations() {
   if (!('showDirectoryPicker' in window)) {
-    document.getElementById('sidebar-locations-section').style.display = 'none';
+    document.getElementById('btn-add-location').style.display = 'none';
+    document.getElementById('locations-root').innerHTML = '<span class="sidebar-empty">not supported in this browser</span>';
     return;
   }
   document.getElementById('btn-add-location').addEventListener('click', addLocation);
