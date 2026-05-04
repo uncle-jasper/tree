@@ -1629,31 +1629,104 @@ function resetIdle() {
 }
 
 // ── Markdown preview parser ──────────────────────────────────────────
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function parseInline(s) {
+  return escapeHtml(s)
+    .replace(/`([^`\n]+)`/g, '<code>$1</code>')
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%">')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/~~(.+?)~~/g, '<del>$1</del>');
+}
+
 function parseMarkdown(md) {
-  let html = md
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/```([\s\S]*?)```/g, (_,c) => `<pre><code>${c.trim()}</code></pre>`)
-    .replace(/^#{6} (.+)$/gm,'<h6>$1</h6>')
-    .replace(/^#{5} (.+)$/gm,'<h5>$1</h5>')
-    .replace(/^#{4} (.+)$/gm,'<h4>$1</h4>')
-    .replace(/^#{3} (.+)$/gm,'<h3>$1</h3>')
-    .replace(/^#{2} (.+)$/gm,'<h2>$1</h2>')
-    .replace(/^# (.+)$/gm,'<h1>$1</h1>')
-    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g,'<em>$1</em>')
-    .replace(/~~(.+?)~~/g,'<del>$1</del>')
-    .replace(/`([^`]+)`/g,'<code>$1</code>')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank">$1</a>')
-    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g,'<img src="$2" alt="$1" style="max-width:100%">')
-    .replace(/^[-*] (.+)$/gm,'<li>$1</li>')
-    .replace(/^(\d+)\. (.+)$/gm,'<li>$2</li>')
-    .replace(/(<li>[\s\S]+?<\/li>)(?!\s*<li>)/g,'<ul>$1</ul>')
-    .replace(/^> (.+)$/gm,'<blockquote>$1</blockquote>')
-    .replace(/^---+$/gm,'<hr>')
-    .replace(/\n\n/g,'</p><p>')
-    .replace(/^(.+)$/gm, l =>
-      l.match(/^<[hupbloid]/) ? l : `<p>${l}</p>`
-    );
+  const lines = md.split('\n');
+  let html = '';
+  let i = 0;
+
+  while (i < lines.length) {
+    const lineNum = i + 1;
+    const line = lines[i];
+
+    // Fenced code block
+    if (line.startsWith('```')) {
+      const codeStart = lineNum;
+      let code = '';
+      i++;
+      while (i < lines.length && !lines[i].startsWith('```')) {
+        code += lines[i] + '\n';
+        i++;
+      }
+      html += `<pre data-source-line="${codeStart}"><code>${escapeHtml(code.trim())}</code></pre>\n`;
+      i++;
+      continue;
+    }
+
+    // Heading
+    const hMatch = line.match(/^(#{1,6}) (.+)$/);
+    if (hMatch) {
+      const level = hMatch[1].length;
+      html += `<h${level} data-source-line="${lineNum}">${parseInline(hMatch[2])}</h${level}>\n`;
+      i++;
+      continue;
+    }
+
+    // Horizontal rule
+    if (/^---+$/.test(line)) {
+      html += `<hr data-source-line="${lineNum}">\n`;
+      i++;
+      continue;
+    }
+
+    // Blockquote
+    if (line.startsWith('> ')) {
+      html += `<blockquote data-source-line="${lineNum}">${parseInline(line.slice(2))}</blockquote>\n`;
+      i++;
+      continue;
+    }
+
+    // List
+    if (/^[-*] /.test(line) || /^\d+\. /.test(line)) {
+      const listStart = lineNum;
+      let items = '';
+      while (i < lines.length && (/^[-*] /.test(lines[i]) || /^\d+\. /.test(lines[i]))) {
+        const m = lines[i].match(/^[-*] (.+)$/) || lines[i].match(/^\d+\. (.+)$/);
+        if (m) items += `<li>${parseInline(m[1])}</li>`;
+        i++;
+      }
+      html += `<ul data-source-line="${listStart}">${items}</ul>\n`;
+      continue;
+    }
+
+    // Empty line
+    if (line.trim() === '') {
+      i++;
+      continue;
+    }
+
+    // Paragraph — collect consecutive non-block lines
+    const paraStart = lineNum;
+    const paraLines = [];
+    while (i < lines.length) {
+      const l = lines[i];
+      if (l.trim() === '') break;
+      if (/^#{1,6} /.test(l)) break;
+      if (l.startsWith('```')) break;
+      if (l.startsWith('> ')) break;
+      if (/^[-*] /.test(l) || /^\d+\. /.test(l)) break;
+      if (/^---+$/.test(l)) break;
+      paraLines.push(l);
+      i++;
+    }
+    if (paraLines.length > 0) {
+      html += `<p data-source-line="${paraStart}">${parseInline(paraLines.join(' '))}</p>\n`;
+    }
+  }
+
   return html;
 }
 
@@ -1704,13 +1777,25 @@ document.getElementById('btn-sync-scroll').addEventListener('click', () => {
   saveSettings();
 });
 
-// Scroll sync: editor scrolls → preview mirrors
+// Scroll sync: editor scrolls → preview mirrors (line-based)
 document.getElementById('editor-scroll').addEventListener('scroll', () => {
-  if (!scrollSynced || currentMode !== 'split') return;
-  const es  = document.getElementById('editor-scroll');
-  const pr  = document.getElementById('preview');
-  const pct = es.scrollTop / (es.scrollHeight - es.clientHeight || 1);
-  pr.scrollTop = pct * (pr.scrollHeight - pr.clientHeight);
+  if (!scrollSynced || currentMode !== 'split' || !view) return;
+  const es = document.getElementById('editor-scroll');
+  const pr = document.getElementById('preview');
+  const block = view.lineBlockAtHeight(es.scrollTop);
+  const lineNum = view.state.doc.lineAt(block.from).number;
+  const elements = Array.from(pr.querySelectorAll('[data-source-line]'));
+  if (!elements.length) {
+    const pct = es.scrollTop / (es.scrollHeight - es.clientHeight || 1);
+    pr.scrollTop = pct * (pr.scrollHeight - pr.clientHeight);
+    return;
+  }
+  let best = elements[0];
+  for (const el of elements) {
+    if (parseInt(el.dataset.sourceLine) <= lineNum) best = el;
+    else break;
+  }
+  pr.scrollTop = Math.max(0, best.offsetTop - 16);
 });
 
 // ── Theme ────────────────────────────────────────────────────────────
