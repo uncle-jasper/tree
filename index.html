@@ -1778,7 +1778,7 @@ document.getElementById('btn-sync-scroll').addEventListener('click', () => {
   saveSettings();
 });
 
-// Scroll sync: editor scrolls → preview mirrors (line-based, rAF-throttled)
+// Scroll sync: editor scrolls → preview mirrors (smooth interpolation, rAF-throttled)
 document.getElementById('editor-scroll').addEventListener('scroll', () => {
   if (!scrollSynced || currentMode !== 'split' || !view) return;
   if (syncScrollRaf) return;
@@ -1786,24 +1786,53 @@ document.getElementById('editor-scroll').addEventListener('scroll', () => {
     syncScrollRaf = null;
     const es = document.getElementById('editor-scroll');
     const pr = document.getElementById('preview');
+
     const block = view.lineBlockAtHeight(es.scrollTop);
     const lineNum = view.state.doc.lineAt(block.from).number;
+    const totalLines = view.state.doc.lines;
+
     const elements = Array.from(pr.querySelectorAll('[data-source-line]'));
     if (!elements.length) {
       const pct = es.scrollTop / (es.scrollHeight - es.clientHeight || 1);
       pr.scrollTop = pct * (pr.scrollHeight - pr.clientHeight);
       return;
     }
-    let best = elements[0];
-    for (const el of elements) {
-      if (parseInt(el.dataset.sourceLine) <= lineNum) best = el;
+
+    // Find the anchor just before the current line
+    let beforeIdx = 0;
+    for (let j = 0; j < elements.length; j++) {
+      if (parseInt(elements[j].dataset.sourceLine) <= lineNum) beforeIdx = j;
       else break;
     }
-    // Use getBoundingClientRect so the offset is relative to the preview viewport,
-    // not to an unrelated positioned ancestor (preview has no position: relative).
-    const prRect = pr.getBoundingClientRect();
-    const elRect = best.getBoundingClientRect();
-    pr.scrollTop = pr.scrollTop + (elRect.top - prRect.top) - 24;
+
+    // Compute a preview element's absolute position within the preview scroll content.
+    // getBoundingClientRect gives viewport-relative coords; adding pr.scrollTop converts
+    // to document-relative, avoiding the offsetTop/offsetParent ambiguity.
+    const prTop = pr.getBoundingClientRect().top;
+    const docPos = el => pr.scrollTop + el.getBoundingClientRect().top - prTop;
+
+    const before = elements[beforeIdx];
+    const after  = elements[beforeIdx + 1];
+    const beforeLine = parseInt(before.dataset.sourceLine);
+    const beforePos  = docPos(before);
+
+    let target;
+    if (!after) {
+      // Past the last anchor — interpolate to the end of the preview
+      const frac = totalLines > beforeLine
+        ? Math.min(1, (lineNum - beforeLine) / (totalLines - beforeLine))
+        : 0;
+      target = beforePos + frac * (pr.scrollHeight - pr.clientHeight - beforePos);
+    } else {
+      // Interpolate smoothly between before and after anchors
+      const afterLine = parseInt(after.dataset.sourceLine);
+      const frac = afterLine > beforeLine
+        ? Math.min(1, (lineNum - beforeLine) / (afterLine - beforeLine))
+        : 0;
+      target = beforePos + frac * (docPos(after) - beforePos);
+    }
+
+    pr.scrollTop = Math.max(0, target);
   });
 });
 
