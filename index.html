@@ -869,6 +869,14 @@
   }
   .sidebar-item > .sidebar-row:hover .sidebar-remove-loc { opacity: 0.4; }
   .sidebar-remove-loc:hover { opacity: 1 !important; }
+  .sidebar-drag-handle {
+    cursor: grab; opacity: 0; font-size: 11px; flex-shrink: 0;
+    color: var(--text); padding-right: 2px; line-height: 1; user-select: none;
+  }
+  .sidebar-loc-row:hover .sidebar-drag-handle { opacity: 0.35; }
+  .sidebar-drag-handle:active { cursor: grabbing; }
+  .sidebar-item.drag-over > .sidebar-row { background: var(--accent) !important; opacity: 1; color: var(--bg); }
+  .sidebar-item.dragging { opacity: 0.35; }
 
   /* ── Sidebar toggle strip ─────────────────────────────────────────── */
   #sidebar-toggle {
@@ -1343,18 +1351,18 @@ function buildExtensions() {
     spellcheckCompartment.of(EditorView.contentAttributes.of({ spellcheck: 'true' })),
     readOnlyCompartment.of(EditorState.readOnly.of(false)),
     keymap.of([
+      { key: 'Tab',           run: insertTwoSpaces },
+      { key: 'Ctrl-s',        run: () => { saveFile(); return true; } },
+      { key: 'Ctrl-h',        run: () => { openSearchPanel(view); return true; } },
+      { key: 'Ctrl-b',        run: () => { wrapSelection('**', '**'); return true; } },
+      { key: 'Ctrl-i',        run: () => { wrapSelection('*', '*'); return true; } },
+      { key: 'Ctrl-k',        run: () => { wrapSelection('[', '](url)'); return true; } },
+      { key: 'Escape',        run: () => { if (focusActive) { exitFocus(); return true; } return false; } },
+      { key: 'Ctrl-Shift-j',  run: () => { if (!justWriteActive) activateJustWrite(); return true; } },
+      { key: 'Mod-Shift-j',   run: () => { if (!justWriteActive) activateJustWrite(); return true; } },
       ...defaultKeymap,
       ...historyKeymap,
       ...searchKeymap,
-      { key: 'Tab', run: insertTwoSpaces },
-      { key: 'Ctrl-s', run: () => { saveFile(); return true; } },
-      { key: 'Ctrl-h', run: () => { openSearchPanel(view); return true; } },
-      { key: 'Ctrl-b', run: () => { wrapSelection('**', '**'); return true; } },
-      { key: 'Ctrl-i', run: () => { wrapSelection('*', '*'); return true; } },
-      { key: 'Ctrl-k', run: () => { wrapSelection('[', '](url)'); return true; } },
-      { key: 'Escape', run: () => { if (focusActive) { exitFocus(); return true; } return false; } },
-      { key: 'Ctrl-Shift-j', run: () => { if (!justWriteActive) activateJustWrite(); return true; } },
-      { key: 'Mod-Shift-j',  run: () => { if (!justWriteActive) activateJustWrite(); return true; } },
       { key: '*', run: (view) => {
         const { state } = view;
         const { from, to } = state.selection.main;
@@ -2558,12 +2566,19 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') hideWordMenu
 // ── Konami code (amber CRT easter egg) ───────────────────────────────
 const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
 let konamiPos = 0;
-document.addEventListener('keydown', e => {
+document.addEventListener('keyup', e => {
   if (e.key === KONAMI[konamiPos]) {
     konamiPos++;
     if (konamiPos === KONAMI.length) {
       konamiPos = 0;
       if (document.body.dataset.theme === 'terminal') {
+        // Erase the 'ba' that was typed into the editor during the sequence
+        if (view && view.hasFocus) {
+          const cur = view.state.selection.main.from;
+          if (view.state.sliceDoc(Math.max(0, cur - 2), cur) === 'ba') {
+            view.dispatch({ changes: { from: cur - 2, to: cur, insert: '' }, userEvent: 'delete' });
+          }
+        }
         const toAmber = !document.body.classList.contains('amber-crt');
         document.body.classList.toggle('amber-crt');
         if (document.getElementById('chk-welcome').checked) {
@@ -2572,7 +2587,7 @@ document.addEventListener('keydown', e => {
       }
     }
   } else {
-    konamiPos = 0;
+    konamiPos = e.key === KONAMI[0] ? 1 : 0;
   }
 });
 
@@ -2665,8 +2680,8 @@ document.addEventListener('keydown', e => {
 
 // ── README tab ────────────────────────────────────────────────────────
 const README_CONTENT = `TREE EDITOR
-A distraction-free markdown editor built on CodeMirror 6.
-Version 1.2
+An advanced markdown editor built on CodeMirror 6.
+Version 1.3
 
 ─────────────────────────────────────────────────────────────────
 
@@ -2678,7 +2693,7 @@ GETTING STARTED
 WRITING
   Markdown is rendered inline as you write.
   Syntax characters dim on lines your cursor isn't on.
-  Bold, italic, and heading levels are shown live.
+  Bold, italic, and headings are shown live in the editor.
 
 KEYBOARD SHORTCUTS
   Ctrl+B          Bold
@@ -2686,6 +2701,8 @@ KEYBOARD SHORTCUTS
   Ctrl+K          Insert link
   Ctrl+H          Find & replace
   Ctrl+S          Save
+  Ctrl+Z          Undo
+  Ctrl+Y          Redo
   Ctrl+Shift+J    Just Write mode
   Esc             Exit focus or Just Write mode
   Tab             Insert two spaces
@@ -2694,6 +2711,26 @@ VIEW MODES
   write      Editor only
   split      Editor + rendered preview side by side
   preview    Rendered markdown only
+
+  In split view, the preview syncs to your scroll position.
+  Toggle sync with the ⇅ button on the divider.
+
+LIBRARY
+  The sidebar organises your files in three sections:
+
+  Locations — Add folders from your file system.
+    Click a folder to expand it and browse .md and .txt files.
+    Drag the ⠿ handle to reorder locations.
+    Chrome on desktop only (requires File System Access API).
+
+  Favorites — Star any file in recent to pin it here.
+    Content is snapshotted so favorites survive browser clears.
+
+  Recent — The last 10 files you opened or saved.
+    Opens the file from its saved content snapshot.
+
+  On iPad: open and save work via the Files app, but
+  Locations requires a desktop browser.
 
 JUST WRITE MODE (Ctrl+Shift+J)
   Locks your theme and font so you stop fussing.
@@ -2704,7 +2741,12 @@ JUST WRITE MODE (Ctrl+Shift+J)
 FOCUS MODE
   Hides the toolbar. Press Esc to exit.
   Hover near the top to peek at the toolbar.
-  The statusbar reappears on hover.
+  The statusbar reappears on hover too.
+
+TABS
+  Multiple documents open as tabs.
+  Tab names come from the first line of content.
+  Pin the tab bar so it doesn't autohide.
 
 WORD MENU
   Right-click any word to define it or find synonyms.
@@ -2718,11 +2760,6 @@ THEMES & FONTS
   Click the theme name in the toolbar to open settings.
   Custom theme: set your own background, text, and accent.
   In terminal theme, try the Konami code.
-
-TABS
-  Multiple documents open as tabs.
-  Tab names come from the first line of content.
-  Pin the tab bar so it doesn't autohide.
 
 ─────────────────────────────────────────────────────────────────
 
@@ -2775,6 +2812,7 @@ function toggleSidebar() {
 
 // ── Locations (File System Access API) ────────────────────────────────
 let savedLocations = [];
+let dragLocId = null;
 
 function idbFsOpen() {
   return new Promise((resolve, reject) => {
@@ -2819,12 +2857,18 @@ async function idbLocDelete(id) {
   } catch(e) {}
 }
 
+async function saveLocationOrder() {
+  savedLocations.forEach((l, i) => { l.order = i; });
+  for (const loc of savedLocations) await idbLocSave(loc);
+}
+
 async function initLocations() {
   if (!('showDirectoryPicker' in window)) {
     document.getElementById('locations-root').innerHTML = '<span class="sidebar-empty">not supported in this browser</span>';
     return;
   }
   savedLocations = await idbLocGetAll();
+  savedLocations.sort((a, b) => (a.order ?? a.id) - (b.order ?? b.id));
   renderSidebarLocations();
 }
 
@@ -2837,7 +2881,7 @@ async function addLocation() {
     else typeStatusMessage('error: ' + e.message);
     return;
   }
-  const loc = { id: Date.now(), name: handle.name, handle };
+  const loc = { id: Date.now(), name: handle.name, handle, order: savedLocations.length };
   await idbLocSave(loc);
   savedLocations.push(loc);
   renderSidebarLocations();
@@ -2856,23 +2900,68 @@ function renderSidebarLocations() {
   for (const loc of savedLocations) {
     const item = document.createElement('div');
     item.className = 'sidebar-item sidebar-folder';
+    item.draggable = true;
+
     const row = document.createElement('div');
     row.className = 'sidebar-row sidebar-loc-row';
+
+    const handle = document.createElement('span');
+    handle.className = 'sidebar-drag-handle';
+    handle.textContent = '⠿';
+    handle.title = 'Drag to reorder';
+
     const icon = document.createElement('span'); icon.className = 'sidebar-icon'; icon.textContent = '▸';
     const nameEl = document.createElement('span'); nameEl.className = 'sidebar-name'; nameEl.textContent = loc.name;
     const removeBtn = document.createElement('button');
     removeBtn.className = 'sidebar-remove-loc'; removeBtn.textContent = '×'; removeBtn.title = 'Remove location';
     removeBtn.addEventListener('click', e => { e.stopPropagation(); removeLocation(loc.id); });
-    row.appendChild(icon); row.appendChild(nameEl); row.appendChild(removeBtn);
+
+    row.appendChild(handle); row.appendChild(icon); row.appendChild(nameEl); row.appendChild(removeBtn);
     const children = document.createElement('div'); children.className = 'sidebar-children';
     item.appendChild(row); item.appendChild(children);
+
     row.addEventListener('click', async e => {
+      if (e.target === handle) return;
       e.stopPropagation();
       const open = item.classList.toggle('open');
       icon.textContent = open ? '▾' : '▸';
       if (open) await renderLocationTree(loc.handle, children);
       else children.innerHTML = '';
     });
+
+    // Drag-and-drop reordering
+    item.addEventListener('dragstart', e => {
+      dragLocId = loc.id;
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    item.addEventListener('dragend', () => {
+      dragLocId = null;
+      item.classList.remove('dragging');
+      root.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+    });
+    item.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      root.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+      item.classList.add('drag-over');
+    });
+    item.addEventListener('dragleave', e => {
+      if (!item.contains(e.relatedTarget)) item.classList.remove('drag-over');
+    });
+    item.addEventListener('drop', e => {
+      e.preventDefault();
+      item.classList.remove('drag-over');
+      if (dragLocId == null || dragLocId === loc.id) return;
+      const fromIdx = savedLocations.findIndex(l => l.id === dragLocId);
+      const toIdx   = savedLocations.findIndex(l => l.id === loc.id);
+      if (fromIdx === -1 || toIdx === -1) return;
+      const [moved] = savedLocations.splice(fromIdx, 1);
+      savedLocations.splice(toIdx, 0, moved);
+      saveLocationOrder();
+      renderSidebarLocations();
+    });
+
     root.appendChild(item);
   }
   const addRow = document.createElement('div');
