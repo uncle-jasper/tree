@@ -1179,6 +1179,7 @@ let currentMode     = 'write';
 let autohideEnabled = false;
 let focusActive     = false;
 let scrollSynced    = true;
+let syncScrollRaf   = null;
 let statusMsgBusy   = false;
 let tabBarPinned    = false;
 let isDirty         = false;
@@ -1777,25 +1778,33 @@ document.getElementById('btn-sync-scroll').addEventListener('click', () => {
   saveSettings();
 });
 
-// Scroll sync: editor scrolls → preview mirrors (line-based)
+// Scroll sync: editor scrolls → preview mirrors (line-based, rAF-throttled)
 document.getElementById('editor-scroll').addEventListener('scroll', () => {
   if (!scrollSynced || currentMode !== 'split' || !view) return;
-  const es = document.getElementById('editor-scroll');
-  const pr = document.getElementById('preview');
-  const block = view.lineBlockAtHeight(es.scrollTop);
-  const lineNum = view.state.doc.lineAt(block.from).number;
-  const elements = Array.from(pr.querySelectorAll('[data-source-line]'));
-  if (!elements.length) {
-    const pct = es.scrollTop / (es.scrollHeight - es.clientHeight || 1);
-    pr.scrollTop = pct * (pr.scrollHeight - pr.clientHeight);
-    return;
-  }
-  let best = elements[0];
-  for (const el of elements) {
-    if (parseInt(el.dataset.sourceLine) <= lineNum) best = el;
-    else break;
-  }
-  pr.scrollTop = Math.max(0, best.offsetTop - 16);
+  if (syncScrollRaf) return;
+  syncScrollRaf = requestAnimationFrame(() => {
+    syncScrollRaf = null;
+    const es = document.getElementById('editor-scroll');
+    const pr = document.getElementById('preview');
+    const block = view.lineBlockAtHeight(es.scrollTop);
+    const lineNum = view.state.doc.lineAt(block.from).number;
+    const elements = Array.from(pr.querySelectorAll('[data-source-line]'));
+    if (!elements.length) {
+      const pct = es.scrollTop / (es.scrollHeight - es.clientHeight || 1);
+      pr.scrollTop = pct * (pr.scrollHeight - pr.clientHeight);
+      return;
+    }
+    let best = elements[0];
+    for (const el of elements) {
+      if (parseInt(el.dataset.sourceLine) <= lineNum) best = el;
+      else break;
+    }
+    // Use getBoundingClientRect so the offset is relative to the preview viewport,
+    // not to an unrelated positioned ancestor (preview has no position: relative).
+    const prRect = pr.getBoundingClientRect();
+    const elRect = best.getBoundingClientRect();
+    pr.scrollTop = pr.scrollTop + (elRect.top - prRect.top) - 24;
+  });
 });
 
 // ── Theme ────────────────────────────────────────────────────────────
