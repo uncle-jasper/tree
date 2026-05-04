@@ -686,7 +686,7 @@
 
   /* ── Inline markdown formatting ── */
   .cm-tree-h1, .cm-tree-h2, .cm-tree-h3,
-  .cm-tree-h4, .cm-tree-h5, .cm-tree-h6 { font-weight: 700; }
+  .cm-tree-h4, .cm-tree-h5, .cm-tree-h6 { font-weight: 700; -webkit-text-stroke: 0.4px currentColor; }
   .cm-tree-strong { font-weight: 700; -webkit-text-stroke: 0.4px currentColor; }
   .cm-tree-em { font-style: italic; }
 
@@ -802,14 +802,14 @@
     border: none;
     font-family: inherit;
     font-size: 10px;
-    color: var(--accent);
-    opacity: 0.6;
+    color: var(--text);
+    opacity: 0.45;
     cursor: pointer;
     padding: 2px 4px;
     border-radius: 3px;
     flex-shrink: 0;
   }
-  .sidebar-connect:hover, .sidebar-disconnect:hover, .sidebar-change:hover { opacity: 1; }
+  .sidebar-connect:hover, .sidebar-disconnect:hover, .sidebar-change:hover { opacity: 0.9; }
   .sidebar-tree { padding: 0 0 8px; }
   .sidebar-item {
     display: flex;
@@ -853,6 +853,15 @@
   .sidebar-star:hover, .sidebar-star.active { opacity: 1; }
   .sidebar-fav-row { justify-content: space-between; overflow: hidden; }
   .sidebar-loc-row { justify-content: space-between; overflow: hidden; }
+  .sidebar-add-loc-row {
+    padding: 4px 14px 4px 14px;
+    font-size: 11px;
+    cursor: pointer;
+    user-select: none;
+    color: var(--text);
+    opacity: 0.55;
+  }
+  .sidebar-add-loc-row:hover { opacity: 1; }
   .sidebar-remove-loc {
     background: none; border: none; font-size: 13px; line-height: 1;
     cursor: pointer; opacity: 0; padding: 0 2px; color: inherit;
@@ -939,7 +948,6 @@
       <div id="sidebar-locations-section" class="sidebar-section">
         <div class="sidebar-section-header">
           <span class="sidebar-source-name">locations</span>
-          <button class="sidebar-connect" id="btn-add-location">+ add</button>
         </div>
         <div id="locations-root" class="sidebar-tree"></div>
       </div>
@@ -1396,12 +1404,12 @@ function buildExtensions() {
       '&.cm-focused .cm-selectionBackground': { background: 'var(--accent) !important', opacity: '0.25' },
       '.cm-line span': { textDecoration: 'none' },
       '.cm-line span.cm-tree-strike': { textDecoration: 'line-through' },
-      '.cm-tree-h1': { fontWeight: '700' },
-      '.cm-tree-h2': { fontWeight: '700' },
-      '.cm-tree-h3': { fontWeight: '700' },
-      '.cm-tree-h4': { fontWeight: '700' },
-      '.cm-tree-h5': { fontWeight: '700' },
-      '.cm-tree-h6': { fontWeight: '700' },
+      '.cm-tree-h1': { fontWeight: '700', WebkitTextStroke: '0.4px currentColor' },
+      '.cm-tree-h2': { fontWeight: '700', WebkitTextStroke: '0.4px currentColor' },
+      '.cm-tree-h3': { fontWeight: '700', WebkitTextStroke: '0.4px currentColor' },
+      '.cm-tree-h4': { fontWeight: '700', WebkitTextStroke: '0.4px currentColor' },
+      '.cm-tree-h5': { fontWeight: '700', WebkitTextStroke: '0.4px currentColor' },
+      '.cm-tree-h6': { fontWeight: '700', WebkitTextStroke: '0.4px currentColor' },
       '.cm-tree-strong': { fontWeight: '700', WebkitTextStroke: '0.4px currentColor' },
       '.cm-tree-em': { fontStyle: 'italic' },
     }),
@@ -2111,7 +2119,7 @@ document.getElementById('file-open').addEventListener('change', function() {
       setContent(text);
       document.getElementById('filename-input').value = f.name;
       const tab = getActiveTab();
-      if (tab) { tab.name = f.name; tab.dirty = false; }
+      if (tab) { tab.name = f.name; tab.dirty = false; tab.manualName = true; }
       isDirty = false;
       // Reset JW word baseline so loading a big file can't cheat the 500-word target
       if (justWriteActive && activeTabId === justWriteTabId) {
@@ -2122,6 +2130,8 @@ document.getElementById('file-open').addEventListener('change', function() {
       // New tab
       const id = createTab(f.name, text, null);
       activeTabId = id;
+      const newTab = getActiveTab();
+      if (newTab) newTab.manualName = true;
       setContent(text);
       document.getElementById('filename-input').value = f.name;
       fileHandle = null;
@@ -2688,23 +2698,27 @@ async function idbLocDelete(id) {
 
 async function initLocations() {
   if (!('showDirectoryPicker' in window)) {
-    document.getElementById('btn-add-location').style.display = 'none';
     document.getElementById('locations-root').innerHTML = '<span class="sidebar-empty">not supported in this browser</span>';
     return;
   }
-  document.getElementById('btn-add-location').addEventListener('click', addLocation);
   savedLocations = await idbLocGetAll();
   renderSidebarLocations();
 }
 
 async function addLocation() {
+  typeStatusMessage('opening folder picker…');
   let handle;
   try { handle = await window.showDirectoryPicker({ mode: 'readwrite' }); }
-  catch(e) { return; }
+  catch(e) {
+    if (e.name === 'AbortError') typeStatusMessage('cancelled.');
+    else typeStatusMessage('error: ' + e.message);
+    return;
+  }
   const loc = { id: Date.now(), name: handle.name, handle };
   await idbLocSave(loc);
   savedLocations.push(loc);
   renderSidebarLocations();
+  typeStatusMessage('location added: ' + handle.name);
 }
 
 async function removeLocation(id) {
@@ -2738,9 +2752,11 @@ function renderSidebarLocations() {
     });
     root.appendChild(item);
   }
-  if (!savedLocations.length) {
-    root.innerHTML = '<span class="sidebar-empty">no locations added</span>';
-  }
+  const addRow = document.createElement('div');
+  addRow.className = 'sidebar-add-loc-row';
+  addRow.textContent = '+ add folder';
+  addRow.addEventListener('click', addLocation);
+  root.appendChild(addRow);
 }
 
 async function renderLocationTree(dirHandle, container) {
@@ -2797,13 +2813,15 @@ async function openFromLocation(handle, name) {
   saveActiveTabState();
   if (getContent().trim() === '' && !isDirty) {
     const tab = getActiveTab();
-    if (tab) { tab.name = name; tab.dirty = false; }
+    if (tab) { tab.name = name; tab.dirty = false; tab.handle = handle; }
     document.getElementById('filename-input').value = name;
     fileHandle = handle; isDirty = false;
     setContent(content);
   } else {
     const id = createTab(name, content, null);
     activeTabId = id;
+    const tab = getActiveTab();
+    if (tab) tab.handle = handle;
     document.getElementById('filename-input').value = name;
     fileHandle = handle; isDirty = false;
     setContent(content);
@@ -2950,13 +2968,15 @@ function openFromRecent(r) {
   saveActiveTabState();
   if (getContent().trim() === '' && !isDirty) {
     const tab = getActiveTab();
-    if (tab) { tab.name = r.name; tab.dirty = false; }
+    if (tab) { tab.name = r.name; tab.dirty = false; tab.manualName = true; }
     document.getElementById('filename-input').value = r.name;
     fileHandle = null; isDirty = false;
     setContent(r.content);
   } else {
     const id = createTab(r.name, r.content, null);
     activeTabId = id;
+    const tab = getActiveTab();
+    if (tab) tab.manualName = true;
     document.getElementById('filename-input').value = r.name;
     fileHandle = null; isDirty = false;
     setContent(r.content);
