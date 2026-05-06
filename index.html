@@ -99,7 +99,6 @@
     background: var(--surface);
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
-    overflow: hidden;
     transition: background 0.3s, border-color 0.3s, opacity 0.3s, transform 0.3s;
   }
 
@@ -441,7 +440,7 @@
     flex-shrink: 0;
   }
   .tab:hover { opacity: 0.75; }
-  .tab.active { opacity: 1; color: var(--text); border-bottom: 2px solid var(--accent); }
+  .tab.active { opacity: 0.72; color: var(--text); border-bottom: 2px solid var(--accent); }
   .tab.dirty .tab-name::after { content: ' ·'; font-size: 11px; }
   .tab-name { overflow: hidden; text-overflow: ellipsis; flex: 1; }
   .tab-close { font-size: 12px; color: var(--muted); opacity: 0; line-height: 1; flex-shrink: 0; transition: opacity 0.15s; }
@@ -1583,13 +1582,10 @@ function applyTypewriterScroll() {
   if (!typewriterMode || !view) return;
   requestAnimationFrame(() => {
     const pos = view.state.selection.main.head;
-    const coords = view.coordsAtPos(pos);
-    if (!coords) return;
+    const block = view.lineBlockAt(pos);
+    const lineMid = block.top + block.height / 2;
     const scrollEl = document.getElementById('editor-scroll');
-    const scrollRect = scrollEl.getBoundingClientRect();
-    const cursorMid = (coords.top + coords.bottom) / 2;
-    const targetMid = scrollRect.top + scrollRect.height / 2;
-    scrollEl.scrollTop += cursorMid - targetMid;
+    scrollEl.scrollTop = lineMid - scrollEl.clientHeight / 2;
   });
 }
 
@@ -2199,8 +2195,17 @@ function renderTabs() {
 
     el.appendChild(name);
     el.appendChild(close);
-    el.addEventListener('click', () => switchTab(tab.id));
-    name.addEventListener('dblclick', e => { e.stopPropagation(); startTabRename(tab, name); });
+    let tabClickTimer = null;
+    el.addEventListener('click', () => {
+      clearTimeout(tabClickTimer);
+      tabClickTimer = setTimeout(() => switchTab(tab.id), 180);
+    });
+    name.addEventListener('dblclick', e => {
+      clearTimeout(tabClickTimer);
+      e.stopPropagation();
+      switchTab(tab.id);
+      startTabRename(tab, name);
+    });
     list.appendChild(el);
   });
 }
