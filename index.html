@@ -928,6 +928,22 @@
   }
   #sidebar-toggle:hover { opacity: 1; }
 
+  /* ── WordPress settings inputs ── */
+  .wp-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 5px 8px;
+    outline: none;
+    box-sizing: border-box;
+  }
+  .wp-input:focus { border-color: var(--accent); }
+  .wp-input::placeholder { opacity: 0.35; color: var(--muted); }
+
 </style>
 </head>
 <body data-theme="parchment">
@@ -939,6 +955,7 @@
   <div class="tool-group">
     <button id="btn-save" title="Save file (Ctrl+S)">⬇ save</button>
     <button id="btn-open" title="Open file">⬆ open</button>
+    <button id="btn-wp-draft" title="Send to WordPress as draft">↑ wp</button>
     <input id="file-open" type="file" accept=".md,.txt" style="display:none">
   </div>
   <div class="tool-group">
@@ -1135,6 +1152,16 @@
         <input type="checkbox" id="chk-spellcheck" checked>
         <label for="chk-spellcheck">spellcheck</label>
       </div>
+    </div>
+    <hr class="settings-divider">
+    <div class="settings-section">
+      <h3>WordPress</h3>
+      <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
+        <input type="url" id="wp-url" class="wp-input" placeholder="https://yoursite.com" spellcheck="false" autocomplete="off">
+        <input type="text" id="wp-username" class="wp-input" placeholder="username" spellcheck="false" autocomplete="off">
+        <input type="password" id="wp-password" class="wp-input" placeholder="application password" autocomplete="off">
+      </div>
+      <p style="margin-top:8px; font-size:10px; color:var(--muted); opacity:0.6; line-height:1.6;">Generate an application password in your WordPress admin under Users → Profile. Stored locally on this device only.</p>
     </div>
   </div>
 </div>
@@ -3244,6 +3271,87 @@ async function initLibrary() {
 
 document.getElementById('sidebar-toggle').addEventListener('click', toggleSidebar);
 
+// ── WordPress integration ──────────────────────────────────────────────
+const WP_KEY = 'tree-wp';
+
+function loadWpSettings() {
+  try {
+    const raw = localStorage.getItem(WP_KEY);
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    if (s.url)      document.getElementById('wp-url').value      = s.url;
+    if (s.username) document.getElementById('wp-username').value = s.username;
+    if (s.password) document.getElementById('wp-password').value = s.password;
+  } catch(e) {}
+}
+
+function saveWpSettings() {
+  try {
+    localStorage.setItem(WP_KEY, JSON.stringify({
+      url:      document.getElementById('wp-url').value.trim(),
+      username: document.getElementById('wp-username').value.trim(),
+      password: document.getElementById('wp-password').value,
+    }));
+  } catch(e) {}
+}
+
+async function sendToWordPress() {
+  const url      = document.getElementById('wp-url').value.trim().replace(/\/$/, '');
+  const username = document.getElementById('wp-username').value.trim();
+  const password = document.getElementById('wp-password').value;
+
+  if (!url || !username || !password) {
+    document.getElementById('settings-overlay').style.display = 'flex';
+    typeStatusMessage('add your wordpress credentials in settings first.');
+    return;
+  }
+
+  const content = getContent();
+  if (!content.trim()) { typeStatusMessage('nothing to send.'); return; }
+
+  // Derive title from first H1, or first non-empty line
+  const lines = content.split('\n');
+  let title = 'untitled';
+  let bodyStart = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const h1 = lines[i].match(/^# (.+)$/);
+    if (h1) { title = h1[1].trim(); bodyStart = i + 1; break; }
+    if (lines[i].trim()) { title = lines[i].trim().replace(/^#+\s*/, ''); break; }
+  }
+  const bodyHtml = parseMarkdown(lines.slice(bodyStart).join('\n').trim());
+
+  typeStatusMessage('sending to wordpress…');
+  document.getElementById('btn-wp-draft').disabled = true;
+
+  try {
+    const res = await fetch(url + '/wp-json/wp/v2/posts', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Basic ' + btoa(username + ':' + password),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ title, content: bodyHtml, status: 'draft' }),
+    });
+    if (res.ok) {
+      typeStatusMessage('draft sent to wordpress ✓');
+    } else {
+      const err = await res.json().catch(() => ({}));
+      typeStatusMessage('wordpress: ' + (err.message || 'error ' + res.status));
+    }
+  } catch(e) {
+    typeStatusMessage('could not reach wordpress — check site url and cors settings.');
+  } finally {
+    document.getElementById('btn-wp-draft').disabled = false;
+  }
+}
+
+document.getElementById('btn-wp-draft').addEventListener('click', sendToWordPress);
+
+['wp-url', 'wp-username', 'wp-password'].forEach(id => {
+  document.getElementById(id).addEventListener('change', saveWpSettings);
+  document.getElementById(id).addEventListener('blur', saveWpSettings);
+});
+
 // ── Init ──────────────────────────────────────────────────────────────
 function init() {
   // Register service worker for PWA offline support
@@ -3253,6 +3361,7 @@ function init() {
 
   // Load settings first (sets theme, font, size before editor mounts)
   loadSettings();
+  loadWpSettings();
 
   // Restore autosaved content
   let initialContent = '';
