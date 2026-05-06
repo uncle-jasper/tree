@@ -131,7 +131,7 @@
     transform: translateY(0);
     pointer-events: auto;
   }
-  body.focus-mode #tab-list-group { display: none; }
+  body.focus-mode:not(.toolbar-peek) #tab-list-group { display: none; }
   body.focus-mode #editor-scroll { padding: 0 5% 34px; }
   body.focus-mode .cm-content { padding-top: 5vh; }
   body.focus-mode.statusbar-peek #statusbar {
@@ -1582,10 +1582,13 @@ function applyTypewriterScroll() {
   if (!typewriterMode || !view) return;
   requestAnimationFrame(() => {
     const pos = view.state.selection.main.head;
-    const block = view.lineBlockAt(pos);
-    const lineMid = block.top + block.height / 2;
+    const coords = view.coordsAtPos(pos);
+    if (!coords) return;
     const scrollEl = document.getElementById('editor-scroll');
-    scrollEl.scrollTop = lineMid - scrollEl.clientHeight / 2;
+    const rect = scrollEl.getBoundingClientRect();
+    const cursorY = (coords.top + coords.bottom) / 2;
+    const centerY = rect.top + rect.height / 2;
+    scrollEl.scrollTop += cursorY - centerY;
   });
 }
 
@@ -1793,11 +1796,11 @@ function parseMarkdown(md) {
       continue;
     }
 
-    // Heading
-    const hMatch = line.match(/^(#{1,6}) (.+)$/);
+    // Heading (content optional — bare "## " mid-typing must not freeze the loop)
+    const hMatch = line.match(/^(#{1,6})(?:\s+(.+))?$/);
     if (hMatch) {
       const level = hMatch[1].length;
-      html += `<h${level} data-source-line="${lineNum}">${parseInline(hMatch[2])}</h${level}>\n`;
+      html += `<h${level} data-source-line="${lineNum}">${parseInline(hMatch[2] || '')}</h${level}>\n`;
       i++;
       continue;
     }
@@ -2204,7 +2207,10 @@ function renderTabs() {
       clearTimeout(tabClickTimer);
       e.stopPropagation();
       switchTab(tab.id);
-      startTabRename(tab, name);
+      requestAnimationFrame(() => {
+        const freshEl = document.querySelector(`.tab[data-id="${tab.id}"] .tab-name`);
+        if (freshEl) startTabRename(tab, freshEl);
+      });
     });
     list.appendChild(el);
   });
