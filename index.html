@@ -332,8 +332,8 @@
   .cm-focused .cm-selectionBackground { background: var(--accent) !important; opacity: 0.25; }
   .cm-gutters { display: none !important; }
   .cm-activeLine { background-color: transparent !important; }
-  /* Hide default CM6 syntax colours — we'll add our own in Phase 3 */
-  .cm-line span[class^="tok"] { color: inherit !important; text-decoration: none !important; }
+  /* Suppress all CM6 default syntax colours — our own plugins handle decoration */
+  .cm-line span { color: inherit; text-decoration: none; }
   /* Placeholder */
   .cm-placeholder { color: var(--muted) !important; opacity: 0.45; }
 
@@ -393,7 +393,7 @@
   #preview pre code { background: none; padding: 0; }
   #preview hr { border: none; border-top: 1px solid var(--border); margin: 1.5em 0; }
   #preview a { color: var(--accent); }
-  #preview strong { font-weight: 600; }
+  #preview strong { font-weight: 700; -webkit-text-stroke: 0.4px currentColor; }
   #preview em { font-style: italic; }
   #preview del { opacity: 0.5; text-decoration: line-through; }
   #preview table { border-collapse: collapse; width: 100%; margin: 0.8em 0; }
@@ -721,7 +721,7 @@
   /* ── Inline markdown formatting ── */
   .cm-tree-h1, .cm-tree-h2, .cm-tree-h3,
   .cm-tree-h4, .cm-tree-h5, .cm-tree-h6 { font-weight: 700; -webkit-text-stroke: 0.4px currentColor; }
-  .cm-tree-strong { font-weight: 700; -webkit-text-stroke: 0.4px currentColor; }
+  .cm-tree-strong { font-weight: 700; -webkit-text-stroke: 0.6px currentColor; }
   .cm-tree-em { font-style: italic; }
 
   /* ── Heading outdent: # hangs into left margin ── */
@@ -1446,7 +1446,8 @@ function buildExtensions() {
     crosshairCursor(),
     highlightActiveLine(),
     highlightSpecialChars(),
-    syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+    /* defaultHighlightStyle removed — it applied muted colours to list markers
+       and other elements; we handle all styling through inlineFormattingPlugin */
     markdown({ base: markdownLanguage }),
     search({ top: true }),
     syntaxDimmingPlugin,
@@ -1485,6 +1486,7 @@ function buildExtensions() {
           view.dispatch({ changes: [{ from: from - 1, to: from - 1, insert: '*' }, { from: from + 1, to: from + 1, insert: '*' }], selection: EditorSelection.cursor(from + 1), userEvent: 'input' });
           return true;
         }
+        if (b1 === '*') return false;
         view.dispatch({ changes: { from, to: from, insert: '**' }, selection: EditorSelection.cursor(from + 1), userEvent: 'input' });
         return true;
       }},
@@ -1825,14 +1827,19 @@ function parseMarkdown(md) {
       continue;
     }
 
-    // List — use <ol> for numbered items, <ul> for bullets
-    if (/^[-*] /.test(line) || /^\d+\. /.test(line)) {
+    // List — use <ol> for numbered items, <ul> for bullets; stop when type changes
+    if (/^[-*+] /.test(line) || /^\d+\. /.test(line)) {
       const listStart = lineNum;
       const isOrdered = /^\d+\. /.test(line);
       const tag = isOrdered ? 'ol' : 'ul';
       let items = '';
-      while (i < lines.length && (/^[-*] /.test(lines[i]) || /^\d+\. /.test(lines[i]))) {
-        const m = lines[i].match(/^[-*+] (.+)$/) || lines[i].match(/^\d+\. (.+)$/);
+      while (i < lines.length) {
+        const l = lines[i];
+        const lineOrdered = /^\d+\. /.test(l);
+        const lineBullet  = /^[-*+] /.test(l);
+        if (!lineOrdered && !lineBullet) break;
+        if (lineOrdered !== isOrdered) break;
+        const m = l.match(/^[-*+] (.+)$/) || l.match(/^\d+\. (.+)$/);
         if (m) items += `<li>${parseInline(m[1])}</li>`;
         i++;
       }
