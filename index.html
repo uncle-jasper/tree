@@ -102,14 +102,16 @@
     transition: background 0.3s, border-color 0.3s, opacity 0.3s, transform 0.3s;
   }
 
+  body.toolbar-hidden #header {
+    position: absolute;
+    width: 100%;
+    top: 0;
+    z-index: 11;
+  }
   body.toolbar-hidden #toolbar {
     opacity: 0;
     transform: translateY(-100%);
     pointer-events: none;
-    position: absolute;
-    width: 100%;
-    z-index: 11;
-    top: 0;
   }
   body.toolbar-peek #toolbar {
     opacity: 1;
@@ -1004,7 +1006,7 @@
       <option value="terminal">terminal</option>
       <option value="custom">custom…</option>
     </select>
-    <span id="theme-label" title="Appearance">parchment</span>
+    <span id="theme-label" title="style">style</span>
     <div id="quick-settings">
       <div class="settings-theme-list">
         <div class="settings-theme-item" data-value="parchment"><span class="theme-swatch" style="background:#f5f0e8"></span>parchment</div>
@@ -1069,11 +1071,6 @@
           <option value="22">22px</option>
           <option value="24">24px</option>
         </select>
-      </div>
-      <hr class="settings-divider" style="margin-top:12px;">
-      <div class="settings-row">
-        <input type="checkbox" id="chk-autohide">
-        <label for="chk-autohide">autohide toolbar</label>
       </div>
     </div>
   </div>
@@ -1176,6 +1173,10 @@
       <div class="settings-row">
         <input type="checkbox" id="chk-typewriter">
         <label for="chk-typewriter">typewriter mode</label>
+      </div>
+      <div class="settings-row">
+        <input type="checkbox" id="chk-autohide">
+        <label for="chk-autohide">autohide toolbar</label>
       </div>
     </div>
     <hr class="settings-divider">
@@ -1992,7 +1993,7 @@ function clearCustomColors() {
 
 function syncThemeUI() {
   const val = document.getElementById('theme-select').value || 'parchment';
-  document.getElementById('theme-label').textContent = val;
+  document.getElementById('theme-label').title = val;
   document.querySelectorAll('.settings-theme-item').forEach(item => {
     item.classList.toggle('active', item.dataset.value === val);
   });
@@ -2177,6 +2178,9 @@ document.getElementById('editor-cm').addEventListener('dblclick', () => {
 });
 
 // ── Tabs ──────────────────────────────────────────────────────────────
+let lastClickTabId = null;
+let lastClickTime  = 0;
+
 function renderTabs() {
   const list = document.getElementById('tab-list');
   list.innerHTML = '';
@@ -2198,19 +2202,19 @@ function renderTabs() {
 
     el.appendChild(name);
     el.appendChild(close);
-    let tabClickTimer = null;
-    el.addEventListener('click', () => {
-      clearTimeout(tabClickTimer);
-      tabClickTimer = setTimeout(() => switchTab(tab.id), 180);
-    });
-    name.addEventListener('dblclick', e => {
-      clearTimeout(tabClickTimer);
-      e.stopPropagation();
-      switchTab(tab.id);
-      requestAnimationFrame(() => {
+    el.addEventListener('click', e => {
+      if (e.target.classList.contains('tab-close')) return;
+      const now = Date.now();
+      if (lastClickTabId === tab.id && now - lastClickTime < 400) {
+        // Two quick clicks on the same tab → rename
+        lastClickTabId = null;
         const freshEl = document.querySelector(`.tab[data-id="${tab.id}"] .tab-name`);
         if (freshEl) startTabRename(tab, freshEl);
-      });
+      } else {
+        lastClickTabId = tab.id;
+        lastClickTime  = now;
+        switchTab(tab.id);
+      }
     });
     list.appendChild(el);
   });
