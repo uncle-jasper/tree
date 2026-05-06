@@ -358,7 +358,7 @@
     background: var(--bg);
     color: var(--text);
     border-left: 1px solid var(--border);
-    font-family: Georgia, 'Times New Roman', serif;
+    font-family: var(--preview-font, Georgia, 'Times New Roman', serif);
     display: none;
     transition: background 0.3s, color 0.3s;
   }
@@ -629,6 +629,8 @@
     font-family: 'JetBrains Mono', monospace;
     color: var(--text);
     min-width: 280px;
+    max-height: 80vh;
+    overflow-y: auto;
     box-shadow: 0 8px 40px rgba(0,0,0,0.4);
     position: relative;
   }
@@ -1152,6 +1154,24 @@
         <input type="checkbox" id="chk-spellcheck" checked>
         <label for="chk-spellcheck">spellcheck</label>
       </div>
+      <div class="settings-row">
+        <input type="checkbox" id="chk-typewriter">
+        <label for="chk-typewriter">typewriter mode</label>
+      </div>
+    </div>
+    <hr class="settings-divider">
+    <div class="settings-section">
+      <h3>Preview</h3>
+      <div class="settings-row" style="margin-top:8px;">
+        <label for="preview-font-select" style="min-width:36px;">font</label>
+        <select id="preview-font-select">
+          <option value="">same as editor</option>
+          <option value="'iAWriterQuattroS', sans-serif">iA Writer Quattro</option>
+          <option value="Georgia, serif">Georgia</option>
+          <option value="'Geist Sans', sans-serif">Geist Sans</option>
+          <option value="system-ui, sans-serif">system</option>
+        </select>
+      </div>
     </div>
     <hr class="settings-divider">
     <div class="settings-section">
@@ -1537,6 +1557,21 @@ function wrapSelection(before, after) {
   view.focus();
 }
 
+// ── Typewriter mode ──────────────────────────────────────────────────
+let typewriterMode = false;
+
+function applyTypewriterScroll() {
+  if (!typewriterMode || !view) return;
+  const pos = view.state.selection.main.head;
+  const coords = view.coordsAtPos(pos);
+  if (!coords) return;
+  const scrollEl = document.getElementById('editor-scroll');
+  const scrollRect = scrollEl.getBoundingClientRect();
+  const cursorMid = (coords.top + coords.bottom) / 2;
+  const targetMid = scrollRect.top + scrollRect.height / 2;
+  scrollEl.scrollTop += cursorMid - targetMid;
+}
+
 // ── Editor update listener ───────────────────────────────────────────
 let lastWordCount = 0;
 
@@ -1561,12 +1596,13 @@ function onEditorUpdate(update) {
     renderPreview();
     resetIdle();
     syncTabName();
-    ensureCursorPadding();
+    if (!typewriterMode) ensureCursorPadding();
   }
   if (update.selectionSet) {
     updateCursor();
-    ensureCursorPadding();
+    if (!typewriterMode) ensureCursorPadding();
   }
+  if (update.docChanged || update.selectionSet) applyTypewriterScroll();
 }
 
 function updateStats() {
@@ -2438,8 +2474,10 @@ function saveSettings() {
       showLines:    document.getElementById('chk-show-lines').checked,
       showReadtime: document.getElementById('chk-show-readtime').checked,
       showCursor:   document.getElementById('chk-show-cursor').checked,
-      spellcheck:   document.getElementById('chk-spellcheck').checked,
-      mode:         currentMode,
+      spellcheck:    document.getElementById('chk-spellcheck').checked,
+      typewriterMode: typewriterMode,
+      previewFont:   document.getElementById('preview-font-select').value,
+      mode:          currentMode,
     }));
   } catch(e) {}
 }
@@ -2491,6 +2529,15 @@ function loadSettings() {
     if (s.spellcheck === false) {
       document.getElementById('chk-spellcheck').checked = false;
     }
+    if (s.typewriterMode) {
+      typewriterMode = true;
+      document.getElementById('chk-typewriter').checked = true;
+    }
+    if (s.previewFont !== undefined) {
+      document.getElementById('preview-font-select').value = s.previewFont;
+      const font = s.previewFont || "Georgia, 'Times New Roman', serif";
+      document.documentElement.style.setProperty('--preview-font', font);
+    }
     if (s.mode) setMode(s.mode);
     syncThemeUI();
     applyStatusBarVisibility();
@@ -2512,6 +2559,17 @@ document.getElementById('chk-spellcheck').addEventListener('change', function() 
   view.dispatch({ effects: spellcheckCompartment.reconfigure(
     EditorView.contentAttributes.of({ spellcheck: this.checked ? 'true' : 'false' })
   )});
+  saveSettings();
+});
+
+document.getElementById('chk-typewriter').addEventListener('change', function() {
+  typewriterMode = this.checked;
+  saveSettings();
+});
+
+document.getElementById('preview-font-select').addEventListener('change', function() {
+  const font = this.value || "Georgia, 'Times New Roman', serif";
+  document.documentElement.style.setProperty('--preview-font', font);
   saveSettings();
 });
 
@@ -3318,7 +3376,7 @@ async function sendToWordPress() {
     if (h1) { title = h1[1].trim(); bodyStart = i + 1; break; }
     if (lines[i].trim()) { title = lines[i].trim().replace(/^#+\s*/, ''); break; }
   }
-  const bodyHtml = parseMarkdown(lines.slice(bodyStart).join('\n').trim());
+  const bodyHtml = `<h3>${title}</h3>\n` + parseMarkdown(lines.slice(bodyStart).join('\n').trim());
 
   typeStatusMessage('sending to wordpress…');
   document.getElementById('btn-wp-draft').disabled = true;
