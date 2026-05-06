@@ -95,11 +95,11 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    padding: 8px 14px;
+    padding: 6px 10px;
     background: var(--surface);
     border-bottom: 1px solid var(--border);
-    flex-wrap: wrap;
     flex-shrink: 0;
+    overflow: hidden;
     transition: background 0.3s, border-color 0.3s, opacity 0.3s, transform 0.3s;
   }
 
@@ -132,7 +132,7 @@
     transform: translateY(0);
     pointer-events: auto;
   }
-  body.focus-mode #tab-bar { display: none; }
+  body.focus-mode #tab-list-group { display: none; }
   body.focus-mode #editor-scroll { padding: 0 5% 34px; }
   body.focus-mode .cm-content { padding-top: 5vh; }
   body.focus-mode.statusbar-peek #statusbar {
@@ -185,19 +185,7 @@
   button:hover { background: var(--border); border-color: var(--muted); }
   button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
-  #filename-input {
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: 5px;
-    color: var(--text);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
-    padding: 5px 8px;
-    width: 160px;
-    transition: border-color 0.2s, background 0.2s;
-    outline: none;
-  }
-  #filename-input:focus { border-color: var(--muted); background: var(--bg); }
+  /* filename-input hidden — tab handles naming */
 
   select {
     background: transparent;
@@ -358,7 +346,7 @@
     background: var(--bg);
     color: var(--text);
     border-left: 1px solid var(--border);
-    font-family: var(--preview-font, Georgia, 'Times New Roman', serif);
+    font-family: var(--preview-font, var(--editor-font));
     display: none;
     transition: background 0.3s, color 0.3s;
   }
@@ -412,53 +400,66 @@
   #preview th { background: var(--surface); font-weight: 600; }
 
   /* ── Tab bar ── */
-  #tab-bar {
+  /* ── Merged tab list (inside toolbar) ── */
+  #tab-list-group {
+    flex: 1;
     display: flex;
     align-items: center;
-    background: var(--surface);
-    border: none;
-    flex-shrink: 0;
+    overflow: hidden;
+    padding-right: 4px;
+    border-right: 1px solid var(--border);
+    margin-right: 4px;
+    min-width: 0;
+  }
+  #tab-list {
+    display: flex;
+    align-items: stretch;
+    flex: 1;
     overflow-x: auto;
     scrollbar-width: none;
     gap: 0;
-    padding: 2px 8px;
-    border-bottom: 1px solid;
-    border-color: rgba(128,128,128,0.15);
-    transition: background 0.3s, opacity 0.6s;
   }
-  body.tabbar-faded #tab-bar { opacity: 0; pointer-events: none; }
-  #tab-bar::-webkit-scrollbar { display: none; }
-  #tab-list { display: flex; align-items: center; flex: 1; gap: 16px; }
+  #tab-list::-webkit-scrollbar { display: none; }
   .tab {
     display: flex;
     align-items: center;
     gap: 5px;
-    padding: 2px 0;
+    padding: 4px 10px;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
+    font-size: 12px;
     color: var(--muted);
-    opacity: 0.4;
+    opacity: 0.45;
     cursor: pointer;
     white-space: nowrap;
-    max-width: 160px;
-    transition: opacity 0.15s, color 0.15s;
+    min-width: 100px;
+    max-width: 180px;
+    transition: opacity 0.15s, color 0.15s, border-color 0.15s;
     user-select: none;
     border: none;
+    border-right: 1px solid var(--border);
     background: none;
+    flex-shrink: 0;
   }
-  .tab:hover { opacity: 0.7; }
-  .tab.active { opacity: 0.5; color: var(--text); }
-  .tab.dirty .tab-name::after { content: ' ·'; font-size: 10px; }
-  .tab-name { overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
-  .tab-close { font-size: 11px; color: var(--muted); opacity: 0; line-height: 1; flex-shrink: 0; transition: opacity 0.15s; }
-  .tab:hover .tab-close, .tab.active .tab-close { opacity: 0.5; }
+  .tab:hover { opacity: 0.75; }
+  .tab.active { opacity: 1; color: var(--text); border-bottom: 2px solid var(--accent); }
+  .tab.dirty .tab-name::after { content: ' ·'; font-size: 11px; }
+  .tab-name { overflow: hidden; text-overflow: ellipsis; flex: 1; }
+  .tab-close { font-size: 12px; color: var(--muted); opacity: 0; line-height: 1; flex-shrink: 0; transition: opacity 0.15s; }
+  .tab:hover .tab-close, .tab.active .tab-close { opacity: 0.4; }
   .tab-close:hover { opacity: 1 !important; }
-  #btn-new-tab { font-size: 14px; padding: 1px 6px; color: var(--muted); opacity: 0.5; flex-shrink: 0; border: none; background: none; transition: opacity 0.15s; }
+  #btn-new-tab { font-size: 14px; padding: 2px 8px; color: var(--muted); opacity: 0.4; flex-shrink: 0; border: none; background: none; transition: opacity 0.15s; }
   #btn-new-tab:hover { opacity: 0.9; background: none; }
-  #btn-pin-tabs { font-size: 12px; padding: 1px 6px; color: var(--muted); opacity: 0; pointer-events: none; flex-shrink: 0; border: none; background: none; transition: opacity 0.3s; }
-  body.show-pin #btn-pin-tabs { opacity: 0.5; pointer-events: auto; }
-  body.show-pin #btn-pin-tabs.pinned { opacity: 0.6; color: var(--accent); pointer-events: auto; }
-  #btn-pin-tabs:hover { opacity: 0.6; background: none; }
+  .tab-rename-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--accent);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    outline: none;
+    width: 100%;
+    padding: 0;
+  }
 
   /* ── Status bar ── */
   #statusbar {
@@ -537,7 +538,6 @@
   body[data-theme="terminal"] button,
   body[data-theme="terminal"] select,
   body[data-theme="terminal"] .custom-dropdown,
-  body[data-theme="terminal"] #filename-input { color: var(--text); text-shadow: 0 0 6px rgba(51,255,51,0.3); }
 
   @keyframes crt-flicker {
     0%   { opacity: 1; } 92% { opacity: 1; } 93% { opacity: 0.93; }
@@ -567,7 +567,6 @@
   body[data-theme="terminal"].amber-crt button,
   body[data-theme="terminal"].amber-crt select,
   body[data-theme="terminal"].amber-crt .custom-dropdown,
-  body[data-theme="terminal"].amber-crt #filename-input { color: var(--text); text-shadow: 0 0 6px rgba(255,176,0,0.3); }
   body[data-theme="terminal"].amber-crt .cm-cursor { border-left-color: #ffb000 !important; }
 
   /* ── Just Write mode ── */
@@ -628,7 +627,8 @@
     padding: 36px 48px;
     font-family: 'JetBrains Mono', monospace;
     color: var(--text);
-    min-width: 280px;
+    width: 90vw;
+    max-width: 320px;
     max-height: 80vh;
     overflow-y: auto;
     box-shadow: 0 8px 40px rgba(0,0,0,0.4);
@@ -930,6 +930,28 @@
   }
   #sidebar-toggle:hover { opacity: 1; }
 
+  /* ── Quick settings popover ── */
+  #quick-settings {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 1500;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    min-width: 210px;
+    box-shadow: 0 6px 28px rgba(0,0,0,0.3);
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text);
+    font-size: 11px;
+  }
+  #quick-settings.open { display: block; }
+  body.just-write #quick-settings { display: none !important; }
+  #quick-settings .settings-row { margin-top: 8px; }
+  #quick-settings .settings-divider { margin: 10px 0; }
+
   /* ── WordPress settings inputs ── */
   .wp-input {
     width: 100%;
@@ -951,14 +973,16 @@
 <body data-theme="parchment">
 
 <div id="header"><div id="toolbar">
-  <div class="tool-group">
-    <input id="filename-input" type="text" value="untitled.md" spellcheck="false" title="Filename" />
+  <div id="tab-list-group">
+    <div id="tab-list"></div>
+    <button id="btn-new-tab" title="New tab">＋</button>
   </div>
   <div class="tool-group">
     <button id="btn-save" title="Save file (Ctrl+S)">⬇ save</button>
     <button id="btn-open" title="Open file">⬆ open</button>
     <button id="btn-wp-draft" title="Send to WordPress as draft">↑ wp</button>
     <input id="file-open" type="file" accept=".md,.txt" style="display:none">
+    <input id="filename-input" type="text" value="untitled.md" style="display:none" spellcheck="false">
   </div>
   <div class="tool-group">
     <select id="mode-select" title="View mode">
@@ -981,83 +1005,8 @@
       <option value="terminal">terminal</option>
       <option value="custom">custom…</option>
     </select>
-    <span id="theme-label" title="Theme (opens settings)">parchment</span>
-  </div>
-  <div class="tool-group">
-    <button id="btn-autohide" title="Auto-hide toolbar while typing">autohide</button>
-    <button id="btn-focus" title="Focus mode (Esc to exit)">⛶ focus</button>
-    <button id="btn-settings" title="Settings">settings</button>
-    <button id="btn-about" title="About Tree">···</button>
-  </div>
-</div>
-
-<div id="focus-hint">press Esc to exit focus mode</div>
-<div id="tab-bar">
-  <div id="tab-list"></div>
-  <button id="btn-pin-tabs" title="Pin tab bar">⊙</button>
-  <button id="btn-new-tab" title="New tab">＋</button>
-</div>
-</div><!-- /#header -->
-
-<div id="main">
-  <div id="sidebar">
-    <div id="sidebar-inner">
-      <div id="sidebar-header">library</div>
-      <div id="sidebar-locations-section" class="sidebar-section">
-        <div class="sidebar-section-header">
-          <span class="sidebar-source-name">locations</span>
-        </div>
-        <div id="locations-root" class="sidebar-tree"></div>
-      </div>
-      <div id="sidebar-favorites-section" class="sidebar-section">
-        <div class="sidebar-section-header">
-          <span class="sidebar-source-name">favorites</span>
-        </div>
-        <div id="favorites-root" class="sidebar-tree"></div>
-      </div>
-      <div id="sidebar-recent-section" class="sidebar-section">
-        <div class="sidebar-section-header">
-          <span class="sidebar-source-name">recent</span>
-        </div>
-        <div id="recent-root" class="sidebar-tree"></div>
-      </div>
-    </div>
-  </div>
-  <button id="sidebar-toggle" title="Toggle library">›</button>
-  <div id="editor-scroll">
-    <div id="editor-cm"></div>
-  </div>
-  <div id="split-divider">
-    <button id="btn-sync-scroll" title="Toggle scroll sync">⇅</button>
-  </div>
-  <div id="preview"></div>
-</div>
-
-<div id="statusbar">
-  <div class="stat-left">
-    <span id="word-count">0 words</span>
-    <span id="char-count">0 chars</span>
-    <span id="line-count">1 line</span>
-  </div>
-  <div class="stat-centre">
-    <span id="read-time"></span>
-    <span id="save-indicator">✓ saved</span>
-  </div>
-  <div id="welcome-msg"></div>
-  <div class="stat-right">
-    <span id="cursor-pos">ln 1, col 1</span>
-  </div>
-</div>
-
-<!-- Right-click word menu -->
-<div id="word-menu"></div>
-
-<!-- Settings Modal -->
-<div id="settings-overlay" style="display:none">
-  <div id="settings-modal">
-    <button id="btn-settings-close" title="Close">×</button>
-    <div class="settings-section">
-      <h3>Appearance</h3>
+    <span id="theme-label" title="Appearance">parchment</span>
+    <div id="quick-settings">
       <div class="settings-theme-list">
         <div class="settings-theme-item" data-value="parchment"><span class="theme-swatch" style="background:#f5f0e8"></span>parchment</div>
         <div class="settings-theme-item" data-value="sepia"><span class="theme-swatch" style="background:#c8a97e"></span>sepia</div>
@@ -1122,8 +1071,79 @@
           <option value="24">24px</option>
         </select>
       </div>
+      <hr class="settings-divider" style="margin-top:12px;">
+      <div class="settings-row">
+        <input type="checkbox" id="chk-autohide">
+        <label for="chk-autohide">autohide toolbar</label>
+      </div>
     </div>
-    <hr class="settings-divider">
+  </div>
+  <div class="tool-group">
+    <button id="btn-focus" title="Focus mode (Esc to exit)">⛶ focus</button>
+    <button id="btn-settings" title="Settings">settings</button>
+    <button id="btn-about" title="About Tree">···</button>
+  </div>
+</div>
+<div id="focus-hint">press Esc to exit focus mode</div>
+</div><!-- /#header -->
+
+<div id="main">
+  <div id="sidebar">
+    <div id="sidebar-inner">
+      <div id="sidebar-header">library</div>
+      <div id="sidebar-locations-section" class="sidebar-section">
+        <div class="sidebar-section-header">
+          <span class="sidebar-source-name">locations</span>
+        </div>
+        <div id="locations-root" class="sidebar-tree"></div>
+      </div>
+      <div id="sidebar-favorites-section" class="sidebar-section">
+        <div class="sidebar-section-header">
+          <span class="sidebar-source-name">favorites</span>
+        </div>
+        <div id="favorites-root" class="sidebar-tree"></div>
+      </div>
+      <div id="sidebar-recent-section" class="sidebar-section">
+        <div class="sidebar-section-header">
+          <span class="sidebar-source-name">recent</span>
+        </div>
+        <div id="recent-root" class="sidebar-tree"></div>
+      </div>
+    </div>
+  </div>
+  <button id="sidebar-toggle" title="Toggle library">›</button>
+  <div id="editor-scroll">
+    <div id="editor-cm"></div>
+  </div>
+  <div id="split-divider">
+    <button id="btn-sync-scroll" title="Toggle scroll sync">⇅</button>
+  </div>
+  <div id="preview"></div>
+</div>
+
+<div id="statusbar">
+  <div class="stat-left">
+    <span id="word-count">0 words</span>
+    <span id="char-count">0 chars</span>
+    <span id="line-count">1 line</span>
+  </div>
+  <div class="stat-centre">
+    <span id="read-time"></span>
+    <span id="save-indicator">✓ saved</span>
+  </div>
+  <div id="welcome-msg"></div>
+  <div class="stat-right">
+    <span id="cursor-pos">ln 1, col 1</span>
+  </div>
+</div>
+
+<!-- Right-click word menu -->
+<div id="word-menu"></div>
+
+<!-- Settings Modal -->
+<div id="settings-overlay" style="display:none">
+  <div id="settings-modal">
+    <button id="btn-settings-close" title="Close">×</button>
     <div class="settings-section">
       <h3>Status bar</h3>
       <div class="settings-row">
@@ -1280,7 +1300,6 @@ let fileHandle      = null;
 let saveTimer       = null;
 let autohideTimer   = null;
 let idleTimer       = null;
-let tabHideTimer    = null;
 let focusHintTimer  = null;
 let view              = null; // CM6 EditorView
 let justWriteActive   = false;
@@ -1562,14 +1581,16 @@ let typewriterMode = false;
 
 function applyTypewriterScroll() {
   if (!typewriterMode || !view) return;
-  const pos = view.state.selection.main.head;
-  const coords = view.coordsAtPos(pos);
-  if (!coords) return;
-  const scrollEl = document.getElementById('editor-scroll');
-  const scrollRect = scrollEl.getBoundingClientRect();
-  const cursorMid = (coords.top + coords.bottom) / 2;
-  const targetMid = scrollRect.top + scrollRect.height / 2;
-  scrollEl.scrollTop += cursorMid - targetMid;
+  requestAnimationFrame(() => {
+    const pos = view.state.selection.main.head;
+    const coords = view.coordsAtPos(pos);
+    if (!coords) return;
+    const scrollEl = document.getElementById('editor-scroll');
+    const scrollRect = scrollEl.getBoundingClientRect();
+    const cursorMid = (coords.top + coords.bottom) / 2;
+    const targetMid = scrollRect.top + scrollRect.height / 2;
+    scrollEl.scrollTop += cursorMid - targetMid;
+  });
 }
 
 // ── Editor update listener ───────────────────────────────────────────
@@ -1999,7 +2020,19 @@ function setTheme(val) {
 
 document.getElementById('theme-label').addEventListener('click', () => {
   if (justWriteActive) return;
-  document.getElementById('settings-overlay').style.display = 'flex';
+  document.getElementById('quick-settings').classList.toggle('open');
+});
+
+document.addEventListener('click', e => {
+  const qs = document.getElementById('quick-settings');
+  if (!qs.classList.contains('open')) return;
+  if (!document.getElementById('theme-label').closest('.tool-group').contains(e.target)) {
+    qs.classList.remove('open');
+  }
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.getElementById('quick-settings').classList.remove('open');
 });
 
 document.querySelectorAll('.settings-theme-item').forEach(item => {
@@ -2037,17 +2070,11 @@ document.getElementById('settings-font-size-select').addEventListener('change', 
 });
 
 // ── Autohide ─────────────────────────────────────────────────────────
-document.getElementById('btn-autohide').addEventListener('click', () => {
-  autohideEnabled = !autohideEnabled;
-  document.getElementById('btn-autohide').classList.toggle('active', autohideEnabled);
+document.getElementById('chk-autohide').addEventListener('change', function() {
+  autohideEnabled = this.checked;
   if (!autohideEnabled) {
     clearTimeout(autohideTimer);
     document.body.classList.remove('toolbar-hidden', 'toolbar-peek');
-    document.body.classList.remove('tabbar-faded', 'show-pin');
-  } else {
-    // Let the mousemove handler take over — it'll start the hide timer
-    // once the mouse leaves the header. Starting one here causes a flicker
-    // because the mouse is still over the header right after clicking.
   }
   saveSettings();
 });
@@ -2062,21 +2089,10 @@ function hideToolbar() {
   if (isModalOpen()) return;
   document.body.classList.remove('toolbar-peek');
   document.body.classList.add('toolbar-hidden');
-  if (!tabBarPinned && !focusActive) {
-    tabHideTimer = setTimeout(() => {
-      document.body.classList.add('tabbar-faded');
-      document.body.classList.remove('show-pin');
-    }, 800);
-  }
 }
 
 function revealToolbar() {
-  clearTimeout(tabHideTimer);
-  // Add peek while toolbar-hidden is still set — the base transition on #toolbar
-  // animates the slide-in; then remove toolbar-hidden so it's back in normal flow
   document.body.classList.add('toolbar-peek');
-  document.body.classList.remove('tabbar-faded');
-  document.body.classList.add('show-pin');
   setTimeout(() => document.body.classList.remove('toolbar-hidden'), 310);
 }
 
@@ -2099,14 +2115,11 @@ function setupAutohideZone() {
     clearTimeout(autohideTimer);
 
     if (y <= headerH) {
-      // Over the header: reveal toolbar if hidden, always keep show-pin
       clearTimeout(autohideTimer);
       if (document.body.classList.contains('toolbar-hidden')) {
         revealToolbar();
       }
-      document.body.classList.add('show-pin');
     } else {
-      // Below header: only remove peek — show-pin stays until tab bar fades
       document.body.classList.remove('toolbar-peek');
       if (!isModalOpen()) {
         autohideTimer = setTimeout(hideToolbar, 2000);
@@ -2115,19 +2128,6 @@ function setupAutohideZone() {
   });
 }
 
-// ── Tab bar pin ───────────────────────────────────────────────────────
-document.getElementById('btn-pin-tabs').addEventListener('click', () => {
-  tabBarPinned = !tabBarPinned;
-  updatePinIcon();
-  saveSettings();
-});
-
-function updatePinIcon() {
-  const btn = document.getElementById('btn-pin-tabs');
-  btn.classList.toggle('pinned', tabBarPinned);
-  btn.title = tabBarPinned ? 'Unpin tab bar' : 'Pin tab bar';
-  btn.textContent = tabBarPinned ? '⦿' : '⊙';
-}
 
 // ── Focus mode ────────────────────────────────────────────────────────
 document.getElementById('btn-focus').addEventListener('click', () => {
@@ -2153,7 +2153,6 @@ function enterFocus() {
 function exitFocus() {
   focusActive = false;
   document.body.classList.remove('focus-mode', 'toolbar-peek', 'statusbar-peek');
-  document.body.classList.remove('tabbar-faded');
   document.getElementById('focus-hint').classList.remove('show');
   if (document.fullscreenElement) {
     document.exitFullscreen().catch(() => {});
@@ -2201,8 +2200,36 @@ function renderTabs() {
     el.appendChild(name);
     el.appendChild(close);
     el.addEventListener('click', () => switchTab(tab.id));
+    name.addEventListener('dblclick', e => { e.stopPropagation(); startTabRename(tab, name); });
     list.appendChild(el);
   });
+}
+
+function startTabRename(tab, nameEl) {
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = tab.name.replace(/\.md$/, '');
+  input.className = 'tab-rename-input';
+  nameEl.replaceWith(input);
+  input.focus();
+  input.select();
+
+  function commit() {
+    const val = input.value.trim();
+    const newName = val ? (val.endsWith('.md') || val.endsWith('.txt') ? val : val + '.md') : tab.name;
+    tab.name = newName;
+    tab.manualName = true;
+    document.getElementById('filename-input').value = newName;
+    renderTabs();
+    autosave();
+  }
+
+  input.addEventListener('blur', commit);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { renderTabs(); }
+  });
+  input.addEventListener('click', e => e.stopPropagation());
 }
 
 function saveActiveTabState() {
@@ -2463,7 +2490,6 @@ function saveSettings() {
       font:         document.getElementById('settings-font-select').value,
       fontSize:     document.getElementById('settings-font-size-select').value,
       autohide:     autohideEnabled,
-      tabPinned:    tabBarPinned,
       showWelcome:  document.getElementById('chk-welcome').checked,
       crtEnabled:   document.body.classList.contains('crt-on'),
       scrollSynced: scrollSynced,
@@ -2505,11 +2531,7 @@ function loadSettings() {
     }
     if (s.autohide) {
       autohideEnabled = true;
-      document.getElementById('btn-autohide').classList.add('active');
-    }
-    if (s.tabPinned !== undefined) {
-      tabBarPinned = s.tabPinned;
-      updatePinIcon();
+      document.getElementById('chk-autohide').checked = true;
     }
     if (s.showWelcome !== undefined) {
       document.getElementById('chk-welcome').checked = s.showWelcome;
@@ -2535,7 +2557,7 @@ function loadSettings() {
     }
     if (s.previewFont !== undefined) {
       document.getElementById('preview-font-select').value = s.previewFont;
-      const font = s.previewFont || "Georgia, 'Times New Roman', serif";
+      const font = s.previewFont || 'var(--editor-font)';
       document.documentElement.style.setProperty('--preview-font', font);
     }
     if (s.mode) setMode(s.mode);
@@ -2568,7 +2590,7 @@ document.getElementById('chk-typewriter').addEventListener('change', function() 
 });
 
 document.getElementById('preview-font-select').addEventListener('change', function() {
-  const font = this.value || "Georgia, 'Times New Roman', serif";
+  const font = this.value || 'var(--editor-font)';
   document.documentElement.style.setProperty('--preview-font', font);
   saveSettings();
 });
@@ -2596,15 +2618,6 @@ document.getElementById('about-overlay').addEventListener('click', function(e) {
   if (e.target === this) this.style.display = 'none';
 });
 
-// ── Filename input ────────────────────────────────────────────────────
-document.getElementById('filename-input').addEventListener('change', () => {
-  const tab = getActiveTab();
-  if (tab) {
-    tab.name = document.getElementById('filename-input').value;
-    tab.manualName = true;
-    renderTabs();
-  }
-});
 
 // ── Right-click word menu ─────────────────────────────────────────────
 const wordMenu = document.getElementById('word-menu');
