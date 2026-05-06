@@ -1581,15 +1581,20 @@ let typewriterMode = false;
 
 function applyTypewriterScroll() {
   if (!typewriterMode || !view) return;
+  // Double-rAF: CM6 schedules its own scroll-into-view in the first frame after
+  // dispatch; we run in the second frame so our centering wins.
   requestAnimationFrame(() => {
-    const pos = view.state.selection.main.head;
-    const coords = view.coordsAtPos(pos);
-    if (!coords) return;
-    const scrollEl = document.getElementById('editor-scroll');
-    const rect = scrollEl.getBoundingClientRect();
-    const cursorY = (coords.top + coords.bottom) / 2;
-    const centerY = rect.top + rect.height / 2;
-    scrollEl.scrollTop += cursorY - centerY;
+    requestAnimationFrame(() => {
+      if (!typewriterMode || !view) return;
+      const pos = view.state.selection.main.head;
+      const coords = view.coordsAtPos(pos);
+      if (!coords) return;
+      const scrollEl = document.getElementById('editor-scroll');
+      const rect = scrollEl.getBoundingClientRect();
+      const cursorY = (coords.top + coords.bottom) / 2;
+      const centerY = rect.top + rect.height / 2;
+      scrollEl.scrollTop += cursorY - centerY;
+    });
   });
 }
 
@@ -1797,8 +1802,8 @@ function parseMarkdown(md) {
       continue;
     }
 
-    // Heading (content optional — bare "## " mid-typing must not freeze the loop)
-    const hMatch = line.match(/^(#{1,6})(?:\s+(.+))?$/);
+    // Heading — trailing whitespace on bare "## " must not fall through to the paragraph loop
+    const hMatch = line.match(/^(#{1,6})(?:\s+(.+?))?\s*$/);
     if (hMatch) {
       const level = hMatch[1].length;
       html += `<h${level} data-source-line="${lineNum}">${parseInline(hMatch[2] || '')}</h${level}>\n`;
@@ -1820,16 +1825,18 @@ function parseMarkdown(md) {
       continue;
     }
 
-    // List
+    // List — use <ol> for numbered items, <ul> for bullets
     if (/^[-*] /.test(line) || /^\d+\. /.test(line)) {
       const listStart = lineNum;
+      const isOrdered = /^\d+\. /.test(line);
+      const tag = isOrdered ? 'ol' : 'ul';
       let items = '';
       while (i < lines.length && (/^[-*] /.test(lines[i]) || /^\d+\. /.test(lines[i]))) {
-        const m = lines[i].match(/^[-*] (.+)$/) || lines[i].match(/^\d+\. (.+)$/);
+        const m = lines[i].match(/^[-*+] (.+)$/) || lines[i].match(/^\d+\. (.+)$/);
         if (m) items += `<li>${parseInline(m[1])}</li>`;
         i++;
       }
-      html += `<ul data-source-line="${listStart}">${items}</ul>\n`;
+      html += `<${tag} data-source-line="${listStart}">${items}</${tag}>\n`;
       continue;
     }
 
