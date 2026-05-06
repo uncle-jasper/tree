@@ -1580,28 +1580,22 @@ function wrapSelection(before, after) {
 
 // ── Typewriter mode ──────────────────────────────────────────────────
 let typewriterMode = false;
-let _twTimer = null;
+let _twScrolling = false; // guard against scroll dispatch re-entrancy
 
 function applyTypewriterScroll() {
-  if (!typewriterMode || !view) return;
-  // Debounce: cancel any pending centering and wait for CM6 to finish its own
-  // scroll-into-view (which walks up the DOM and sets #editor-scroll.scrollTop).
-  // We then center the cursor after CM6 has settled.
-  if (_twTimer) clearTimeout(_twTimer);
-  _twTimer = setTimeout(() => {
-    _twTimer = null;
-    if (!typewriterMode || !view) return;
-    const scrollEl = document.getElementById('editor-scroll');
-    // Use .cm-activeLine DOM element — always has valid getBoundingClientRect()
-    // even when coordsAtPos() would return null (cursor off-screen before CM6 scroll).
-    const activeLine = scrollEl.querySelector('.cm-activeLine');
-    if (!activeLine) return;
-    const lineRect  = activeLine.getBoundingClientRect();
-    const scrollRect = scrollEl.getBoundingClientRect();
-    const delta = ((lineRect.top + lineRect.bottom) / 2) - (scrollRect.top + scrollRect.height / 2);
-    if (Math.abs(delta) < 2) return;
-    scrollEl.scrollTop += delta;
-  }, 32); // ~2 frames at 60fps — enough for CM6 to finish DOM update + scroll
+  if (!typewriterMode || !view || _twScrolling) return;
+  // Use CM6's own scrollIntoView with y:'center' so it handles coordinate
+  // calculation and scroll-container detection internally. Double-rAF lets
+  // CM6 finish its own DOM update before we dispatch the centering effect.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      if (!typewriterMode || !view || _twScrolling) return;
+      const head = view.state.selection.main.head;
+      _twScrolling = true;
+      view.dispatch({ effects: EditorView.scrollIntoView(head, { y: 'center' }) });
+      _twScrolling = false;
+    });
+  });
 }
 
 // ── Editor update listener ───────────────────────────────────────────
@@ -2619,6 +2613,7 @@ document.getElementById('chk-spellcheck').addEventListener('change', function() 
 
 document.getElementById('chk-typewriter').addEventListener('change', function() {
   typewriterMode = this.checked;
+  if (typewriterMode) applyTypewriterScroll();
   saveSettings();
 });
 
