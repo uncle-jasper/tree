@@ -1580,24 +1580,28 @@ function wrapSelection(before, after) {
 
 // ── Typewriter mode ──────────────────────────────────────────────────
 let typewriterMode = false;
+let _twTimer = null;
 
 function applyTypewriterScroll() {
   if (!typewriterMode || !view) return;
-  // Double-rAF: CM6 schedules its own scroll-into-view in the first frame after
-  // dispatch; we run in the second frame so our centering wins.
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      if (!typewriterMode || !view) return;
-      const pos = view.state.selection.main.head;
-      const coords = view.coordsAtPos(pos);
-      if (!coords) return;
-      const scrollEl = document.getElementById('editor-scroll');
-      const rect = scrollEl.getBoundingClientRect();
-      const cursorY = (coords.top + coords.bottom) / 2;
-      const centerY = rect.top + rect.height / 2;
-      scrollEl.scrollTop += cursorY - centerY;
-    });
-  });
+  // Debounce: cancel any pending centering and wait for CM6 to finish its own
+  // scroll-into-view (which walks up the DOM and sets #editor-scroll.scrollTop).
+  // We then center the cursor after CM6 has settled.
+  if (_twTimer) clearTimeout(_twTimer);
+  _twTimer = setTimeout(() => {
+    _twTimer = null;
+    if (!typewriterMode || !view) return;
+    const scrollEl = document.getElementById('editor-scroll');
+    // Use .cm-activeLine DOM element — always has valid getBoundingClientRect()
+    // even when coordsAtPos() would return null (cursor off-screen before CM6 scroll).
+    const activeLine = scrollEl.querySelector('.cm-activeLine');
+    if (!activeLine) return;
+    const lineRect  = activeLine.getBoundingClientRect();
+    const scrollRect = scrollEl.getBoundingClientRect();
+    const delta = ((lineRect.top + lineRect.bottom) / 2) - (scrollRect.top + scrollRect.height / 2);
+    if (Math.abs(delta) < 2) return;
+    scrollEl.scrollTop += delta;
+  }, 32); // ~2 frames at 60fps — enough for CM6 to finish DOM update + scroll
 }
 
 // ── Editor update listener ───────────────────────────────────────────
