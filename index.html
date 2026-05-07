@@ -352,6 +352,7 @@
     transition: background 0.3s, color 0.3s;
   }
   #preview.visible { display: block; }
+  .preview-inner { max-width: 68ch; margin: 0 auto; }
 
   #split-divider {
     display: none;
@@ -1418,8 +1419,12 @@ const VERSION      = '1.4';
 let currentMode     = 'write';
 let autohideEnabled = false;
 let focusActive     = false;
-let scrollSynced    = true;
-let syncScrollRaf   = null;
+let scrollSynced      = true;
+let syncScrollRaf     = null;
+let syncScrollRafPr   = null;
+let editorSyncedAt    = 0; // timestamp: editor was last scrolled by sync (suppress its echo)
+let previewSyncedAt   = 0; // timestamp: preview was last scrolled by sync (suppress its echo)
+const SYNC_GUARD      = 80; // ms
 let statusMsgBusy   = false;
 let tabBarPinned    = false;
 let isDirty         = false;
@@ -2097,7 +2102,7 @@ function parseMarkdown(md) {
 function renderPreview() {
   const prev = document.getElementById('preview');
   if (!prev.classList.contains('visible')) return;
-  prev.innerHTML = parseMarkdown(getContent());
+  prev.innerHTML = '<div class="preview-inner">' + parseMarkdown(getContent()) + '</div>';
 }
 
 // ── View mode ────────────────────────────────────────────────────────
@@ -2144,6 +2149,7 @@ document.getElementById('btn-sync-scroll').addEventListener('click', () => {
 // Scroll sync: editor scrolls → preview mirrors (smooth interpolation, rAF-throttled)
 document.getElementById('editor-scroll').addEventListener('scroll', () => {
   if (!scrollSynced || currentMode !== 'split' || !view) return;
+  if (Date.now() - editorSyncedAt < SYNC_GUARD) return; // this scroll was caused by us, skip
   if (syncScrollRaf) return;
   syncScrollRaf = requestAnimationFrame(() => {
     syncScrollRaf = null;
@@ -2157,6 +2163,7 @@ document.getElementById('editor-scroll').addEventListener('scroll', () => {
     const elements = Array.from(pr.querySelectorAll('[data-source-line]'));
     if (!elements.length) {
       const pct = es.scrollTop / (es.scrollHeight - es.clientHeight || 1);
+      previewSyncedAt = Date.now();
       pr.scrollTop = pct * (pr.scrollHeight - pr.clientHeight);
       return;
     }
@@ -2195,7 +2202,66 @@ document.getElementById('editor-scroll').addEventListener('scroll', () => {
       target = beforePos + frac * (docPos(after) - beforePos);
     }
 
+    previewSyncedAt = Date.now();
     pr.scrollTop = Math.max(0, target);
+  });
+});
+
+// Scroll sync: preview scrolls → editor mirrors
+document.getElementById('preview').addEventListener('scroll', () => {
+  if (!scrollSynced || currentMode !== 'split' || !view) return;
+  if (Date.now() - previewSyncedAt < SYNC_GUARD) return; // this scroll was caused by us, skip
+  if (syncScrollRafPr) return;
+  syncScrollRafPr = requestAnimationFrame(() => {
+    syncScrollRafPr = null;
+    const es = document.getElementById('editor-scroll');
+    const pr = document.getElementById('preview');
+
+    const elements = Array.from(pr.querySelectorAll('[data-source-line]'));
+    if (!elements.length) {
+      const pct = pr.scrollTop / (pr.scrollHeight - pr.clientHeight || 1);
+      editorSyncedAt = Date.now();
+      es.scrollTop = pct * (es.scrollHeight - es.clientHeight);
+      return;
+    }
+
+    const prTop = pr.getBoundingClientRect().top;
+    const docPos = el => pr.scrollTop + el.getBoundingClientRect().top - prTop;
+
+    // Find the anchor at or just above the preview viewport top
+    let beforeIdx = 0;
+    for (let j = 0; j < elements.length; j++) {
+      if (docPos(elements[j]) <= pr.scrollTop + 1) beforeIdx = j;
+      else break;
+    }
+
+    const before = elements[beforeIdx];
+    const after  = elements[beforeIdx + 1];
+    const beforeLine = parseInt(before.dataset.sourceLine);
+    const beforePos  = docPos(before);
+
+    let targetLine;
+    if (!after) {
+      const remaining = (pr.scrollHeight - pr.clientHeight) - beforePos;
+      const frac = remaining > 0
+        ? Math.min(1, Math.max(0, (pr.scrollTop - beforePos) / remaining))
+        : 0;
+      targetLine = beforeLine + frac * (view.state.doc.lines - beforeLine);
+    } else {
+      const afterLine = parseInt(after.dataset.sourceLine);
+      const afterPos  = docPos(after);
+      const frac = afterPos > beforePos
+        ? Math.min(1, Math.max(0, (pr.scrollTop - beforePos) / (afterPos - beforePos)))
+        : 0;
+      targetLine = beforeLine + frac * (afterLine - beforeLine);
+    }
+
+    targetLine = Math.max(1, Math.min(view.state.doc.lines, Math.round(targetLine)));
+    const lineInfo = view.state.doc.line(targetLine);
+    const lineBlock = view.lineBlockAt(lineInfo.from);
+
+    editorSyncedAt = Date.now();
+    es.scrollTop = Math.max(0, lineBlock.top);
   });
 });
 
