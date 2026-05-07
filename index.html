@@ -314,8 +314,8 @@
     line-height: 1.8 !important;
   }
   .cm-content {
-    padding-top: 24px !important;
-    padding-bottom: 6rem !important;
+    padding-top: var(--tw-pad-top, 24px) !important;
+    padding-bottom: var(--tw-pad-bot, 6rem) !important;
     padding-left: 0 !important;
     padding-right: 0 !important;
     min-height: calc(100vh - 120px);
@@ -386,6 +386,8 @@
   #preview h3 { font-size: 1.2em; font-weight: 600; margin: 0.8em 0 0.3em; }
   #preview p { margin: 0.7em 0; }
   #preview ul, #preview ol { margin: 0.5em 0; padding-left: 1.5em; }
+  #preview ul { list-style-type: disc; }
+  #preview ol { list-style-type: decimal; }
   #preview li { margin: 0.2em 0; padding-left: 0.3em; }
   #preview blockquote { border-left: 3px solid var(--accent); padding: 4px 0 4px 16px; color: var(--muted); font-style: italic; margin: 0.8em 0; }
   #preview code { font-family: 'JetBrains Mono', monospace; font-size: 0.88em; background: var(--surface); padding: 1px 5px; border-radius: 3px; }
@@ -575,6 +577,7 @@
   body.just-write .settings-theme-list { opacity: 0.3; pointer-events: none; }
   body.just-write #settings-font-select { opacity: 0.3; pointer-events: none; }
   body.just-write #settings-font-size-select { opacity: 0.3; pointer-events: none; }
+  body.just-write #btn-settings { opacity: 0.3; pointer-events: none; cursor: default; }
   .tab-name.just-write-tab { font-style: italic; }
 
   /* ── README tab ── */
@@ -969,6 +972,72 @@
   .wp-input:focus { border-color: var(--accent); }
   .wp-input::placeholder { opacity: 0.35; color: var(--muted); }
 
+  /* ── Keys reference panel ── */
+  #keys-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 2000;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #keys-modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 32px 24px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text);
+    width: 90vw;
+    max-width: 460px;
+    max-height: 82vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+    position: relative;
+  }
+  #btn-keys-close {
+    position: absolute; top: 10px; right: 12px;
+    background: none; border: 1px solid var(--border); border-radius: 5px;
+    color: var(--muted); font-size: 12px; padding: 5px 18px;
+    cursor: pointer; opacity: 0.5;
+  }
+  #btn-keys-close:hover { opacity: 1; }
+  .keys-title { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); opacity: 0.6; margin-bottom: 18px; }
+  .keys-groups { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 28px; }
+  .keys-group-title { font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); opacity: 0.7; margin-bottom: 8px; }
+  .keys-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 5px; font-size: 10px; }
+  .keys-row kbd { font-family: 'JetBrains Mono', monospace; font-size: 9px; background: var(--bg); border: 1px solid var(--border); border-radius: 3px; padding: 1px 5px; white-space: nowrap; color: var(--text); opacity: 0.8; flex-shrink: 0; }
+  .keys-row span { color: var(--muted); opacity: 0.7; white-space: nowrap; }
+  .keys-footer { margin-top: 20px; font-size: 9px; color: var(--muted); opacity: 0.4; text-align: center; letter-spacing: 0.05em; }
+
+  /* ── Subtle ? button ── */
+  #btn-keys { opacity: 0.18; font-size: 12px; padding: 0 5px; transition: opacity 0.2s; }
+  #btn-keys:hover { opacity: 0.65; }
+
+  /* ── WP confirm dialog ── */
+  #wp-confirm-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 2000;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #wp-confirm-modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 36px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text);
+    max-width: 300px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+  }
+  #wp-confirm-modal p { font-size: 12px; margin-bottom: 20px; color: var(--text); opacity: 0.85; line-height: 1.6; }
+  #wp-confirm-btns { display: flex; gap: 10px; justify-content: center; }
+  #wp-confirm-btns button { font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 6px 18px; border-radius: 5px; cursor: pointer; border: 1px solid var(--border); background: var(--bg); color: var(--text); opacity: 0.7; }
+  #wp-confirm-btns button:hover { opacity: 1; }
+  #wp-confirm-yes { border-color: var(--accent) !important; color: var(--accent) !important; opacity: 0.8 !important; }
+  #wp-confirm-yes:hover { opacity: 1 !important; }
+
 </style>
 </head>
 <body data-theme="parchment">
@@ -1078,6 +1147,7 @@
     <button id="btn-focus" title="Focus mode (Esc to exit)">⛶ focus</button>
     <button id="btn-settings" title="Settings">settings</button>
     <button id="btn-about" title="About Tree">···</button>
+    <button id="btn-keys" title="Keyboard shortcuts (Ctrl+/)">?</button>
   </div>
 </div>
 <div id="focus-hint">press Esc to exit focus mode</div>
@@ -1207,6 +1277,63 @@
 </div>
 
 <!-- About Modal -->
+<div id="keys-overlay" style="display:none">
+  <div id="keys-modal">
+    <button id="btn-keys-close">close</button>
+    <div class="keys-title">keyboard shortcuts</div>
+    <div class="keys-groups">
+      <div class="keys-group">
+        <div class="keys-group-title">format</div>
+        <div class="keys-row"><kbd>Ctrl+B</kbd><span>bold</span></div>
+        <div class="keys-row"><kbd>Ctrl+I</kbd><span>italic</span></div>
+        <div class="keys-row"><kbd>Ctrl+K</kbd><span>link</span></div>
+        <div class="keys-row"><kbd>Ctrl+1–6</kbd><span>H1–H6</span></div>
+      </div>
+      <div class="keys-group">
+        <div class="keys-group-title">auto-pair</div>
+        <div class="keys-row"><kbd>*</kbd><span>bold (**|**)</span></div>
+        <div class="keys-row"><kbd>~</kbd><span>strikethrough</span></div>
+        <div class="keys-row"><kbd>Tab</kbd><span>jump past marks</span></div>
+      </div>
+      <div class="keys-group">
+        <div class="keys-group-title">file</div>
+        <div class="keys-row"><kbd>Ctrl+S</kbd><span>save</span></div>
+        <div class="keys-row"><kbd>Ctrl+Shift+O</kbd><span>open</span></div>
+        <div class="keys-row"><kbd>Ctrl+H</kbd><span>find / replace</span></div>
+      </div>
+      <div class="keys-group">
+        <div class="keys-group-title">view</div>
+        <div class="keys-row"><kbd>Ctrl+Shift+E</kbd><span>write</span></div>
+        <div class="keys-row"><kbd>Ctrl+Shift+D</kbd><span>split</span></div>
+        <div class="keys-row"><kbd>Ctrl+Shift+R</kbd><span>preview</span></div>
+      </div>
+      <div class="keys-group">
+        <div class="keys-group-title">tools</div>
+        <div class="keys-row"><kbd>Ctrl+Shift+A</kbd><span>autohide</span></div>
+        <div class="keys-row"><kbd>Ctrl+Shift+F</kbd><span>focus</span></div>
+        <div class="keys-row"><kbd>Ctrl+Shift+T</kbd><span>typewriter</span></div>
+        <div class="keys-row"><kbd>Ctrl+Shift+J</kbd><span>just write</span></div>
+      </div>
+      <div class="keys-group">
+        <div class="keys-group-title">history</div>
+        <div class="keys-row"><kbd>Ctrl+Z</kbd><span>undo</span></div>
+        <div class="keys-row"><kbd>Ctrl+Shift+Z</kbd><span>redo</span></div>
+      </div>
+    </div>
+    <div class="keys-footer">Esc or click outside to close · Ctrl+/ to reopen</div>
+  </div>
+</div>
+
+<div id="wp-confirm-overlay" style="display:none">
+  <div id="wp-confirm-modal">
+    <p>Send the current draft to WordPress?</p>
+    <div id="wp-confirm-btns">
+      <button id="wp-confirm-yes">send it</button>
+      <button id="wp-confirm-no">cancel</button>
+    </div>
+  </div>
+</div>
+
 <div id="about-overlay" style="display:none">
   <div id="about-modal">
     <button id="btn-about-close" title="Close">close</button>
@@ -1215,7 +1342,7 @@
     <p class="about-sub">A Markdown Editor</p>
     <p class="about-credit">Vibe coded by Dan</p>
     <p class="about-copy">© 2026</p>
-    <p class="about-version"><span style="font-size:13px;">v1.3</span><span style="font-size:11px; opacity:0.35; margin: 0 5px;">·</span><a href="#" style="font-size:11px; color:var(--accent); opacity:0.5; text-decoration:none;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='0.5'" onclick="document.getElementById('about-overlay').style.display='none'; openReadmeTab(); return false;">readme</a></p>
+    <p class="about-version"><span style="font-size:13px;">v1.4</span><span style="font-size:11px; opacity:0.35; margin: 0 5px;">·</span><a href="#" style="font-size:11px; color:var(--accent); opacity:0.5; text-decoration:none;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='0.5'" onclick="document.getElementById('about-overlay').style.display='none'; openReadmeTab(); return false;">readme</a></p>
     <p style="margin-top:4px; font-size:11px;"><a href="https://buymeacoffee.com/dandanmian" target="_blank" style="color:var(--accent); opacity:0.7; text-decoration:none;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">☕ buy me a coffee</a></p>
   </div>
 </div>
@@ -1285,7 +1412,7 @@ const AUTOSAVE_KEY = 'tree-autosave';
 const JW_KEY       = 'tree-just-write';
 const JW_WORDS     = 500;
 const JW_MINUTES   = 30;
-const VERSION      = '1.2';
+const VERSION      = '1.4';
 
 // ── State variables ──────────────────────────────────────────────────
 let currentMode     = 'write';
@@ -1456,7 +1583,23 @@ function buildExtensions() {
     spellcheckCompartment.of(EditorView.contentAttributes.of({ spellcheck: 'true' })),
     readOnlyCompartment.of(EditorState.readOnly.of(false)),
     keymap.of([
-      { key: 'Tab',           run: insertTwoSpaces },
+      { key: 'Tab', run: (view) => {
+        const { state } = view;
+        const { from, to } = state.selection.main;
+        if (from === to) {
+          const a2 = state.sliceDoc(from, Math.min(state.doc.length, from + 2));
+          const a1 = state.sliceDoc(from, Math.min(state.doc.length, from + 1));
+          if (a2 === '**' || a2 === '~~') {
+            view.dispatch({ selection: EditorSelection.cursor(from + 2), userEvent: 'select' });
+            return true;
+          }
+          if (a1 === '*') {
+            view.dispatch({ selection: EditorSelection.cursor(from + 1), userEvent: 'select' });
+            return true;
+          }
+        }
+        return insertTwoSpaces(view);
+      }},
       { key: 'Ctrl-s',        run: () => { saveFile(); return true; } },
       { key: 'Ctrl-h',        run: () => { openSearchPanel(view); return true; } },
       { key: 'Ctrl-b',        run: () => { wrapSelection('**', '**'); return true; } },
@@ -1465,6 +1608,20 @@ function buildExtensions() {
       { key: 'Escape',        run: () => { if (focusActive) { exitFocus(); return true; } return false; } },
       { key: 'Ctrl-Shift-j',  run: () => { if (!justWriteActive) activateJustWrite(); return true; } },
       { key: 'Mod-Shift-j',   run: () => { if (!justWriteActive) activateJustWrite(); return true; } },
+      { key: 'Ctrl-1',        run: toggleHeading(1) },
+      { key: 'Ctrl-2',        run: toggleHeading(2) },
+      { key: 'Ctrl-3',        run: toggleHeading(3) },
+      { key: 'Ctrl-4',        run: toggleHeading(4) },
+      { key: 'Ctrl-5',        run: toggleHeading(5) },
+      { key: 'Ctrl-6',        run: toggleHeading(6) },
+      { key: 'Ctrl-Shift-o',  run: () => { document.getElementById('file-open').click(); return true; } },
+      { key: 'Ctrl-Shift-e',  run: () => { setMode('write');   return true; } },
+      { key: 'Ctrl-Shift-d',  run: () => { setMode('split');   return true; } },
+      { key: 'Ctrl-Shift-r',  run: () => { setMode('preview'); return true; } },
+      { key: 'Ctrl-Shift-a',  run: () => { toggleAutohide();   return true; } },
+      { key: 'Ctrl-Shift-t',  run: () => { toggleTypewriter(); return true; } },
+      { key: 'Ctrl-Shift-f',  run: () => { if (focusActive) exitFocus(); else enterFocus(); return true; } },
+      { key: 'Ctrl-/',        run: () => { toggleKeysPanel();  return true; } },
       ...defaultKeymap,
       ...historyKeymap,
       ...searchKeymap,
@@ -1472,8 +1629,6 @@ function buildExtensions() {
         const { state } = view;
         const { from, to } = state.selection.main;
         if (from !== to) return false;
-        const line = state.doc.lineAt(from);
-        if (/^\s*$/.test(state.sliceDoc(line.from, from))) return false;
         const b1 = state.sliceDoc(Math.max(0, from - 1), from);
         const b2 = state.sliceDoc(Math.max(0, from - 2), from);
         const a1 = state.sliceDoc(from, Math.min(state.doc.length, from + 1));
@@ -1488,6 +1643,15 @@ function buildExtensions() {
         }
         if (b1 === '*') return false;
         view.dispatch({ changes: { from, to: from, insert: '**' }, selection: EditorSelection.cursor(from + 1), userEvent: 'input' });
+        return true;
+      }},
+      { key: '~', run: (view) => {
+        const { state } = view;
+        const { from, to } = state.selection.main;
+        if (from !== to) return false;
+        const b1 = state.sliceDoc(Math.max(0, from - 1), from);
+        if (b1 === '~') return false; // prevent cascading on second ~
+        view.dispatch({ changes: { from, to: from, insert: '~~~~' }, selection: EditorSelection.cursor(from + 2), userEvent: 'input' });
         return true;
       }},
     ]),
@@ -1529,6 +1693,47 @@ function buildExtensions() {
       '.cm-tree-em': { fontStyle: 'italic' },
     }),
   ];
+}
+
+function toggleAutohide() {
+  autohideEnabled = !autohideEnabled;
+  document.getElementById('chk-autohide').checked = autohideEnabled;
+  if (!autohideEnabled) {
+    clearTimeout(autohideTimer);
+    document.body.classList.remove('toolbar-hidden', 'toolbar-peek');
+  }
+  saveSettings();
+}
+
+function toggleTypewriter() {
+  typewriterMode = !typewriterMode;
+  document.getElementById('chk-typewriter').checked = typewriterMode;
+  setTypewriterPadding(typewriterMode);
+  if (typewriterMode) applyTypewriterScroll();
+  saveSettings();
+}
+
+function toggleHeading(level) {
+  return (view) => {
+    const { state } = view;
+    const line = state.doc.lineAt(state.selection.main.head);
+    const target = '#'.repeat(level) + ' ';
+    const m = line.text.match(/^(#{1,6}) /);
+    if (m && m[0] === target) {
+      view.dispatch({ changes: { from: line.from, to: line.from + target.length, insert: '' }, userEvent: 'input' });
+    } else if (m) {
+      view.dispatch({ changes: { from: line.from, to: line.from + m[0].length, insert: target }, userEvent: 'input' });
+    } else {
+      view.dispatch({ changes: { from: line.from, to: line.from, insert: target }, userEvent: 'input' });
+    }
+    return true;
+  };
+}
+
+function toggleKeysPanel() {
+  const overlay = document.getElementById('keys-overlay');
+  const isOpen = overlay.style.display === 'flex';
+  overlay.style.display = isOpen ? 'none' : 'flex';
 }
 
 function insertTwoSpaces(view) {
@@ -1580,22 +1785,36 @@ function wrapSelection(before, after) {
 
 // ── Typewriter mode ──────────────────────────────────────────────────
 let typewriterMode = false;
-let _twScrolling = false; // guard against scroll dispatch re-entrancy
+
+function setTypewriterPadding(on) {
+  if (on) {
+    const scrollEl = document.getElementById('editor-scroll');
+    const half = Math.round(scrollEl.clientHeight / 2);
+    document.documentElement.style.setProperty('--tw-pad-top', half + 'px');
+    document.documentElement.style.setProperty('--tw-pad-bot', half + 'px');
+  } else {
+    document.documentElement.style.removeProperty('--tw-pad-top');
+    document.documentElement.style.removeProperty('--tw-pad-bot');
+  }
+}
 
 function applyTypewriterScroll() {
-  if (!typewriterMode || !view || _twScrolling) return;
-  // Use CM6's own scrollIntoView with y:'center' so it handles coordinate
-  // calculation and scroll-container detection internally. Double-rAF lets
-  // CM6 finish its own DOM update before we dispatch the centering effect.
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      if (!typewriterMode || !view || _twScrolling) return;
-      const head = view.state.selection.main.head;
-      _twScrolling = true;
-      view.dispatch({ effects: EditorView.scrollIntoView(head, { y: 'center' }) });
-      _twScrolling = false;
-    });
-  });
+  if (!typewriterMode || !view) return;
+  // setTimeout(0) fires after all pending rAFs in this turn, including CM6's
+  // DOM-update rAF, so the active-line geometry is fully settled when we read it.
+  setTimeout(() => {
+    if (!typewriterMode || !view) return;
+    const scrollEl  = document.getElementById('editor-scroll');
+    const activeLine = scrollEl.querySelector('.cm-activeLine');
+    if (!activeLine) return;
+    const lineRect   = activeLine.getBoundingClientRect();
+    const scrollRect = scrollEl.getBoundingClientRect();
+    const contentCenter = lineRect.top - scrollRect.top + scrollEl.scrollTop
+                          + lineRect.height / 2;
+    // scrollEl.clientHeight is the viewport height (padding is on .cm-content,
+    // not on the scroll container, so clientHeight is unaffected by typewriter padding).
+    scrollEl.scrollTop = Math.max(0, contentCenter - scrollEl.clientHeight / 2);
+  }, 0);
 }
 
 // ── Editor update listener ───────────────────────────────────────────
@@ -1867,6 +2086,8 @@ function parseMarkdown(md) {
     }
     if (paraLines.length > 0) {
       html += `<p data-source-line="${paraStart}">${parseInline(paraLines.join(' '))}</p>\n`;
+    } else {
+      i++; // safety: advance past any line that matched no block pattern
     }
   }
 
@@ -2093,7 +2314,9 @@ document.getElementById('chk-autohide').addEventListener('change', function() {
 
 function isModalOpen() {
   return document.getElementById('settings-overlay').style.display === 'flex' ||
-         document.getElementById('about-overlay').style.display === 'flex';
+         document.getElementById('about-overlay').style.display === 'flex' ||
+         document.getElementById('keys-overlay').style.display === 'flex' ||
+         document.getElementById('wp-confirm-overlay').style.display === 'flex';
 }
 
 function hideToolbar() {
@@ -2147,6 +2370,8 @@ document.getElementById('btn-focus').addEventListener('click', () => {
 });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && focusActive) exitFocus();
+  if (e.key === 'Escape' && document.getElementById('keys-overlay').style.display === 'flex') toggleKeysPanel();
+  if (e.key === 'Escape' && document.getElementById('wp-confirm-overlay').style.display === 'flex') document.getElementById('wp-confirm-overlay').style.display = 'none';
 });
 
 function enterFocus() {
@@ -2581,6 +2806,7 @@ function loadSettings() {
     if (s.typewriterMode) {
       typewriterMode = true;
       document.getElementById('chk-typewriter').checked = true;
+      setTypewriterPadding(true);
     }
     if (s.previewFont !== undefined) {
       document.getElementById('preview-font-select').value = s.previewFont;
@@ -2613,6 +2839,7 @@ document.getElementById('chk-spellcheck').addEventListener('change', function() 
 
 document.getElementById('chk-typewriter').addEventListener('change', function() {
   typewriterMode = this.checked;
+  setTypewriterPadding(typewriterMode);
   if (typewriterMode) applyTypewriterScroll();
   saveSettings();
 });
@@ -2844,86 +3071,151 @@ document.addEventListener('keydown', e => {
 
 // ── README tab ────────────────────────────────────────────────────────
 const README_CONTENT = `TREE EDITOR
-An advanced markdown editor built on CodeMirror 6.
-Version 1.3
+Version 1.4
+
+A distraction-free markdown editor built on CodeMirror 6.
 
 ─────────────────────────────────────────────────────────────────
 
 GETTING STARTED
-  Open a file with ⬆ open, or just start typing.
-  Files autosave to your browser every 5 seconds.
-  Press Ctrl+S to save to disk.
+
+  Open a file with ⬆ open or Ctrl+Shift+O. Or just start typing.
+  Files autosave to your browser every few seconds.
+  Ctrl+S saves to disk at any time.
+
 
 WRITING
-  Markdown is rendered inline as you write.
-  Syntax characters dim on lines your cursor isn't on.
-  Bold, italic, and headings are shown live in the editor.
+
+  Markdown renders inline as you type. Syntax characters — **, *,
+  ##, ~~ — dim on lines your cursor isn't on, giving the feel of
+  rendered output without leaving the editor.
+
+  Bold, italic, strikethrough, and headings display live.
+
+
+SMART PUNCTUATION
+
+  Type * and the editor wraps it to **|** with your cursor inside,
+  ready to write bold text. Type ~ for ~~|~~ (strikethrough).
+
+  When you're done, press Tab to jump past the closing marks.
+
+  Typing * while inside **|** expands to ***|*** (bold + italic).
+  Use Ctrl+B or Ctrl+I to wrap a selected word instead.
+
 
 KEYBOARD SHORTCUTS
-  Ctrl+B          Bold
-  Ctrl+I          Italic
-  Ctrl+K          Insert link
-  Ctrl+H          Find & replace
-  Ctrl+S          Save
-  Ctrl+Z          Undo
-  Ctrl+Y          Redo
-  Ctrl+Shift+J    Just Write mode
-  Esc             Exit focus or Just Write mode
-  Tab             Insert two spaces
+
+  Formatting
+    Ctrl+B          Bold
+    Ctrl+I          Italic
+    Ctrl+K          Link
+    Ctrl+1 – Ctrl+6 H1 through H6 (same key again removes it)
+
+  File
+    Ctrl+S          Save to disk
+    Ctrl+Shift+O    Open a file
+
+  Search
+    Ctrl+H          Find & replace (matches highlight as you type)
+
+  View
+    Ctrl+Shift+E    Write mode (editor only)
+    Ctrl+Shift+D    Split mode (editor + preview)
+    Ctrl+Shift+R    Preview mode (rendered only)
+
+  Tools
+    Ctrl+Shift+A    Toggle autohide toolbar
+    Ctrl+Shift+F    Toggle focus mode
+    Ctrl+Shift+T    Toggle typewriter mode
+    Ctrl+Shift+J    Activate Just Write mode
+    Ctrl+/          Open shortcut reference
+
+  History
+    Ctrl+Z          Undo
+    Ctrl+Shift+Z    Redo
+
+  Press the faint ? in the toolbar to see the full reference.
+
 
 VIEW MODES
-  write      Editor only
-  split      Editor + rendered preview side by side
-  preview    Rendered markdown only
 
-  In split view, the preview syncs to your scroll position.
+  write      Editor only — the default.
+  split      Editor on the left, rendered preview on the right.
+  preview    Rendered markdown only, no editing surface.
+
+  In split view the preview mirrors your scroll position.
   Toggle sync with the ⇅ button on the divider.
 
-LIBRARY
-  The sidebar organises your files in three sections:
 
-  Locations — Add folders from your file system.
-    Click a folder to expand it and browse .md and .txt files.
-    Drag the ⠿ handle to reorder locations.
-    Chrome on desktop only (requires File System Access API).
+TYPEWRITER MODE  (Ctrl+Shift+T)
 
-  Favorites — Star any file in recent to pin it here.
-    Content is snapshotted so favorites survive browser clears.
+  Keeps the active line centred vertically as you type, so your
+  eyes stay in one place on the screen. Toggle via Settings or
+  Ctrl+Shift+T.
 
-  Recent — The last 10 files you opened or saved.
-    Opens the file from its saved content snapshot.
 
-  On iPad: open and save work via the Files app, but
-  Locations requires a desktop browser.
+JUST WRITE MODE  (Ctrl+Shift+J)
 
-JUST WRITE MODE (Ctrl+Shift+J)
-  Locks your theme and font so you stop fussing.
-  Write 500 words to unlock early exit.
-  30 minutes pass and it releases on its own.
+  Locks your theme and font for 30 minutes so you stop fussing
+  with settings. Write 500 words to unlock early exit.
   The point is the writing, not the settings.
 
-FOCUS MODE
-  Hides the toolbar. Press Esc to exit.
-  Hover near the top to peek at the toolbar.
-  The statusbar reappears on hover too.
 
-TABS
-  Multiple documents open as tabs.
-  Tab names come from the first line of content.
-  Pin the tab bar so it doesn't autohide.
+FOCUS MODE  (Ctrl+Shift+F)
+
+  Hides the toolbar and enters fullscreen. Hover near the top to
+  peek at the toolbar or status bar. Press Esc to exit.
+
 
 WORD MENU
-  Right-click any word to define it or find synonyms.
-  Powered by the Free Dictionary API. Requires internet.
 
-FIND & REPLACE
-  Press Ctrl+H to open the find/replace panel.
-  All matches highlight as you type.
+  Right-click any word for: Define, Synonyms, and spell-check
+  suggestions. Powered by the Free Dictionary API. Requires
+  internet for definitions and synonyms; spell-check works offline.
+
+
+TABS
+
+  Multiple documents open as tabs.
+  Tab names come from the first line of content.
+  Double-click a tab name to rename it.
+  Pin the tab bar so it stays visible.
+
+
+WORD FREQUENCY
+
+  Double-click any word in the editor to see how many times it
+  appears in the document.
+
+
+LIBRARY  (click › to open)
+
+  Locations — Add folders from your file system. Browse and open
+  .md and .txt files without leaving the editor. Drag ⠿ to
+  reorder. Requires File System Access API (desktop browsers).
+
+  Favorites — Pin any file from Recent. Content is snapshotted
+  so favorites survive browser clears.
+
+  Recent — The last 10 files you opened or saved.
+
+
+WORDPRESS
+
+  Add your site URL and application password in Settings.
+  Click ↑ wp to send the current document to WordPress as a draft.
+  Generate an application password at WordPress → Users → Profile.
+
 
 THEMES & FONTS
-  Click the theme name in the toolbar to open settings.
-  Custom theme: set your own background, text, and accent.
-  In terminal theme, try the Konami code.
+
+  Click the theme label in the toolbar to open quick settings:
+  choose a theme, toggle CRT mode, and adjust font and size.
+  Custom theme lets you set your own background, text, and accent.
+
+  In terminal theme, try the Konami code for something extra.
+
 
 ─────────────────────────────────────────────────────────────────
 
@@ -3444,7 +3736,28 @@ async function sendToWordPress() {
   }
 }
 
-document.getElementById('btn-wp-draft').addEventListener('click', sendToWordPress);
+document.getElementById('btn-wp-draft').addEventListener('click', () => {
+  const content = getContent();
+  if (!content.trim()) { typeStatusMessage('nothing to send.'); return; }
+  document.getElementById('wp-confirm-overlay').style.display = 'flex';
+});
+document.getElementById('wp-confirm-yes').addEventListener('click', () => {
+  document.getElementById('wp-confirm-overlay').style.display = 'none';
+  sendToWordPress();
+});
+document.getElementById('wp-confirm-no').addEventListener('click', () => {
+  document.getElementById('wp-confirm-overlay').style.display = 'none';
+});
+document.getElementById('wp-confirm-overlay').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) document.getElementById('wp-confirm-overlay').style.display = 'none';
+});
+
+// ── Keys panel ────────────────────────────────────────────────────────
+document.getElementById('btn-keys').addEventListener('click', toggleKeysPanel);
+document.getElementById('btn-keys-close').addEventListener('click', toggleKeysPanel);
+document.getElementById('keys-overlay').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) toggleKeysPanel();
+});
 
 ['wp-url', 'wp-username', 'wp-password'].forEach(id => {
   document.getElementById(id).addEventListener('change', saveWpSettings);
