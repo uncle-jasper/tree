@@ -738,6 +738,8 @@
 
   /* ── Syntax dimming ── */
   .cm-syntax-dim { opacity: 0.2; transition: opacity 0.1s; }
+  .cm-link-syntax-dim { opacity: 0.2; transition: opacity 0.1s; }
+  .cm-link-url { opacity: 0.2; text-decoration: underline; text-underline-offset: 2px; transition: opacity 0.1s; }
 
   /* ── Zen mode ── */
   .cm-zen-dim { opacity: 0.3; transition: opacity 0.15s; }
@@ -1340,13 +1342,13 @@
         <div class="keys-group-title">file</div>
         <div class="keys-row"><kbd>Ctrl+S</kbd><span>save</span></div>
         <div class="keys-row"><kbd>Ctrl+Shift+O</kbd><span>open</span></div>
-        <div class="keys-row"><kbd>Ctrl+H</kbd><span>find / replace</span></div>
+        <div class="keys-row"><kbd>Ctrl+H</kbd> / <kbd>Cmd+Shift+F</kbd><span>find / replace</span></div>
       </div>
       <div class="keys-group">
         <div class="keys-group-title">view</div>
-        <div class="keys-row"><kbd>Ctrl+Shift+E</kbd><span>write</span></div>
-        <div class="keys-row"><kbd>Ctrl+Shift+D</kbd><span>split</span></div>
-        <div class="keys-row"><kbd>Ctrl+Shift+R</kbd><span>preview</span></div>
+        <div class="keys-row"><kbd>Ctrl+Shift+A</kbd><span>write</span></div>
+        <div class="keys-row"><kbd>Ctrl+Shift+S</kbd><span>split</span></div>
+        <div class="keys-row"><kbd>Ctrl+Shift+D</kbd><span>preview</span></div>
       </div>
       <div class="keys-group">
         <div class="keys-group-title">tools</div>
@@ -1384,7 +1386,7 @@
     <p class="about-sub">A Markdown Editor</p>
     <p class="about-credit">Vibe coded by Dan</p>
     <p class="about-copy">© 2026</p>
-    <p class="about-version"><span style="font-size:13px;">v1.5.1</span><span style="font-size:11px; opacity:0.35; margin: 0 5px;">·</span><a href="#" style="font-size:11px; color:var(--accent); opacity:0.5; text-decoration:none;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='0.5'" onclick="document.getElementById('about-overlay').style.display='none'; openReadmeTab(); return false;">readme</a></p>
+    <p class="about-version"><span style="font-size:13px;">v1.5.2</span><span style="font-size:11px; opacity:0.35; margin: 0 5px;">·</span><a href="#" style="font-size:11px; color:var(--accent); opacity:0.5; text-decoration:none;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='0.5'" onclick="document.getElementById('about-overlay').style.display='none'; openReadmeTab(); return false;">readme</a></p>
     <p style="margin-top:4px; font-size:11px;"><a href="https://buymeacoffee.com/dandanmian" target="_blank" style="color:var(--accent); opacity:0.7; text-decoration:none;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">☕ buy me a coffee</a></p>
   </div>
 </div>
@@ -1454,7 +1456,7 @@ const AUTOSAVE_KEY = 'tree-autosave';
 const JW_KEY       = 'tree-just-write';
 const JW_WORDS     = 500;
 const JW_MINUTES   = 30;
-const VERSION      = '1.4';
+const VERSION      = '1.5.2';
 
 // ── State variables ──────────────────────────────────────────────────
 let currentMode     = 'write';
@@ -1498,6 +1500,7 @@ const syntaxDimmingPlugin = ViewPlugin.fromClass(class {
   }
   _build(view) {
     const { state } = view;
+    const { from: sentFrom, to: sentTo } = getZenSentenceRange(state);
     const activeLine = state.doc.lineAt(state.selection.main.head).number;
     const builder = new RangeSetBuilder();
     for (const { from, to } of view.visibleRanges) {
@@ -1505,14 +1508,54 @@ const syntaxDimmingPlugin = ViewPlugin.fromClass(class {
         from, to,
         enter(node) {
           const n = node.type.name;
-          if ((n.endsWith('Mark') && n !== 'ListMark') || n === 'HorizontalRule') {
-            if (state.doc.lineAt(node.from).number !== activeLine) {
+          if (n === 'HeaderMark') {
+            if (state.doc.lineAt(node.from).number !== activeLine)
               builder.add(node.from, node.to, syntaxDimMark);
-            }
+          } else if ((n.endsWith('Mark') && n !== 'ListMark' && n !== 'LinkMark') || n === 'HorizontalRule') {
+            if (node.to <= sentFrom || node.from >= sentTo)
+              builder.add(node.from, node.to, syntaxDimMark);
           }
         },
       });
     }
+    return builder.finish();
+  }
+}, { decorations: v => v.decorations });
+
+// ── Link dimming plugin ───────────────────────────────────────────────
+const linkSyntaxDimMark = Decoration.mark({ class: 'cm-link-syntax-dim' });
+const linkUrlMark       = Decoration.mark({ class: 'cm-link-url' });
+
+const linkDimmingPlugin = ViewPlugin.fromClass(class {
+  constructor(view) { this.decorations = this._build(view); }
+  update(u) {
+    if (u.docChanged || u.viewportChanged)
+      this.decorations = this._build(u.view);
+  }
+  _build(view) {
+    const { state } = view;
+    const ranges = [];
+    for (const { from, to } of view.visibleRanges) {
+      let insideLink = 0;
+      syntaxTree(state).iterate({
+        from, to,
+        enter(node) {
+          const n = node.type.name;
+          if (n === 'Link' || n === 'Image') { insideLink++; return; }
+          if (insideLink > 0) {
+            if (n === 'LinkMark') ranges.push({ from: node.from, to: node.to, deco: linkSyntaxDimMark });
+            else if (n === 'URL')  ranges.push({ from: node.from, to: node.to, deco: linkUrlMark });
+          }
+        },
+        leave(node) {
+          const n = node.type.name;
+          if (n === 'Link' || n === 'Image') insideLink--;
+        },
+      });
+    }
+    ranges.sort((a, b) => a.from - b.from);
+    const builder = new RangeSetBuilder();
+    for (const r of ranges) builder.add(r.from, r.to, r.deco);
     return builder.finish();
   }
 }, { decorations: v => v.decorations });
@@ -1754,6 +1797,7 @@ function buildExtensions() {
     markdown({ base: markdownLanguage }),
     search({ top: true }),
     syntaxDimmingPlugin,
+    linkDimmingPlugin,
     zenModePlugin,
     inlineFormattingPlugin,
     lineDecoPlugin,
@@ -1764,8 +1808,13 @@ function buildExtensions() {
         const { state } = view;
         const { from, to } = state.selection.main;
         if (from === to) {
+          const a3 = state.sliceDoc(from, Math.min(state.doc.length, from + 3));
           const a2 = state.sliceDoc(from, Math.min(state.doc.length, from + 2));
           const a1 = state.sliceDoc(from, Math.min(state.doc.length, from + 1));
+          if (a3 === '***') {
+            view.dispatch({ selection: EditorSelection.cursor(from + 3), userEvent: 'select' });
+            return true;
+          }
           if (a2 === '**' || a2 === '~~') {
             view.dispatch({ selection: EditorSelection.cursor(from + 2), userEvent: 'select' });
             return true;
@@ -1779,6 +1828,7 @@ function buildExtensions() {
       }},
       { key: 'Ctrl-s',        run: () => { saveFile(); return true; } },
       { key: 'Ctrl-h',        run: () => { openSearchPanel(view); return true; } },
+      { key: 'Mod-Shift-f',  run: () => { openSearchPanel(view); return true; } },
       { key: 'Ctrl-b',        run: () => { wrapSelection('**', '**'); return true; } },
       { key: 'Ctrl-i',        run: () => { wrapSelection('*', '*'); return true; } },
       { key: 'Ctrl-k',        run: () => { wrapSelection('[', '](url)'); return true; } },
@@ -1792,9 +1842,9 @@ function buildExtensions() {
       { key: 'Ctrl-5',        run: toggleHeading(5) },
       { key: 'Ctrl-6',        run: toggleHeading(6) },
       { key: 'Ctrl-Shift-o',  run: () => { document.getElementById('file-open').click(); return true; } },
-      { key: 'Ctrl-Shift-e',  run: () => { setMode('write');   return true; } },
-      { key: 'Ctrl-Shift-d',  run: () => { setMode('split');   return true; } },
-      { key: 'Ctrl-Shift-r',  run: () => { setMode('preview'); return true; } },
+      { key: 'Ctrl-Shift-a',  run: () => { setMode('write');   return true; } },
+      { key: 'Ctrl-Shift-s',  run: () => { setMode('split');   return true; } },
+      { key: 'Ctrl-Shift-d',  run: () => { setMode('preview'); return true; } },
       { key: 'Ctrl-Shift-h',  run: () => { toggleAutohide();   return true; } },
       { key: 'Ctrl-Shift-t',  run: () => { toggleTypewriter(); return true; } },
       { key: 'Ctrl-Shift-g',  run: () => { toggleZen();        return true; } },
@@ -2028,18 +2078,18 @@ function ensureCursorPadding() {
 function onEditorUpdate(update) {
   if (update.docChanged) {
     markDirty();
-    updateStats();
     scheduleSave();
     renderPreview();
     resetIdle();
     syncTabName();
     if (!typewriterMode) ensureCursorPadding();
   }
-  if (update.selectionSet) {
+  if (update.docChanged || update.selectionSet) {
+    updateStats();
     updateCursor();
+    applyTypewriterScroll();
     if (!typewriterMode) ensureCursorPadding();
   }
-  if (update.docChanged || update.selectionSet) applyTypewriterScroll();
 }
 
 function updateStats() {
@@ -2049,7 +2099,14 @@ function updateStats() {
   const chars = text.length;
   const lines = view.state.doc.lines;
 
-  document.getElementById('word-count').textContent = words + ' word' + (words !== 1 ? 's' : '');
+  const sel = view.state.selection.main;
+  if (sel.from !== sel.to) {
+    const selText  = view.state.sliceDoc(sel.from, sel.to);
+    const selWords = selText.trim() === '' ? 0 : selText.trim().split(/\s+/).filter(Boolean).length;
+    document.getElementById('word-count').textContent = selWords + ' word' + (selWords !== 1 ? 's' : '') + ' selected';
+  } else {
+    document.getElementById('word-count').textContent = words + ' word' + (words !== 1 ? 's' : '');
+  }
 
   if (document.getElementById('chk-show-chars').checked) {
     document.getElementById('char-count').textContent = chars + ' char' + (chars !== 1 ? 's' : '');
@@ -2322,6 +2379,14 @@ function setMode(mode) {
 
 document.getElementById('mode-select').addEventListener('change', function() {
   setMode(this.value);
+});
+
+document.addEventListener('keydown', e => {
+  if (!e.ctrlKey || !e.shiftKey) return;
+  const k = e.key.toLowerCase();
+  if (k === 'a')      { e.preventDefault(); setMode('write'); }
+  else if (k === 's') { e.preventDefault(); setMode('split'); }
+  else if (k === 'd') { e.preventDefault(); setMode('preview'); }
 });
 
 // ── Scroll sync ──────────────────────────────────────────────────────
@@ -3363,7 +3428,7 @@ document.addEventListener('keydown', e => {
 
 // ── README tab ────────────────────────────────────────────────────────
 const README_CONTENT = `TREE EDITOR
-Version 1.5.1
+Version 1.5.2
 
 A distraction-free markdown editor built on CodeMirror 6.
 
@@ -3379,10 +3444,16 @@ GETTING STARTED
 WRITING
 
   Markdown renders inline as you type. Syntax characters — **, *,
-  ##, ~~ — dim on lines your cursor isn't on, giving the feel of
-  rendered output without leaving the editor.
+  ##, ~~ — dim as you move to the next sentence, giving the feel
+  of rendered output without leaving the editor. Heading marks dim
+  the moment you press Enter and move to the next line.
+
+  Completed markdown links auto-dim their brackets and URL, with a
+  subtle underline on the URL to mark it as a link.
 
   Bold, italic, strikethrough, and headings display live.
+
+  Highlight any text to see its word count in the status bar.
 
 
 SMART PUNCTUATION
@@ -3391,6 +3462,8 @@ SMART PUNCTUATION
   ready to write bold text. Type ~ for ~~|~~ (strikethrough).
 
   When you're done, press Tab to jump past the closing marks.
+  Works correctly with *** (bold + italic) — a single Tab clears
+  all three closing asterisks.
 
   Typing * while inside **|** expands to ***|*** (bold + italic).
   Use Ctrl+B or Ctrl+I to wrap a selected word instead.
@@ -3409,12 +3482,13 @@ KEYBOARD SHORTCUTS
     Ctrl+Shift+O    Open a file
 
   Search
-    Ctrl+H          Find & replace (matches highlight as you type)
+    Ctrl+H              Find & replace (matches highlight as you type)
+    Cmd+Shift+F         Find & replace (iPad / Mac alias)
 
-  View
-    Ctrl+Shift+E    Write mode (editor only)
-    Ctrl+Shift+D    Split mode (editor + preview)
-    Ctrl+Shift+R    Preview mode (rendered only)
+  View                  (works from any mode, including preview)
+    Ctrl+Shift+A        Write mode (editor only)
+    Ctrl+Shift+S        Split mode (editor + preview)
+    Ctrl+Shift+D        Preview mode (rendered only)
 
   Tools
     Ctrl+Shift+H    Toggle autohide toolbar

@@ -1,4 +1,4 @@
-const CACHE = 'tree-v30';
+const CACHE = 'tree-v31';
 const ASSETS = ['/tree/', '/tree/index.html', '/tree/manifest.json', '/tree/icon.svg'];
 
 self.addEventListener('install', e => {
