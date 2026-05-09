@@ -102,7 +102,7 @@
     transition: background 0.3s, border-color 0.3s, opacity 0.3s, transform 0.3s;
   }
 
-  body.toolbar-hidden #header {
+  body.autohide-on #header {
     position: absolute;
     width: 100%;
     top: 0;
@@ -327,7 +327,9 @@
     word-break: break-word !important;
   }
   .cm-line { padding: 0 !important; color: var(--text) !important; }
-  .cm-cursor, .cm-dropCursor { border-left-color: var(--accent) !important; border-left-width: 2px; }
+  @keyframes cm-blink  { 0%, 40% { opacity: 1; animation-timing-function: linear; } 50% { opacity: 0; } 90% { opacity: 0; animation-timing-function: linear; } 100% { opacity: 1; } }
+  @keyframes cm-blink2 { 0%, 40% { opacity: 1; animation-timing-function: linear; } 50% { opacity: 0; } 90% { opacity: 0; animation-timing-function: linear; } 100% { opacity: 1; } }
+  .cm-cursor, .cm-dropCursor { border-left-color: var(--accent) !important; border-left-width: 2.5px !important; transform: scaleY(1.2); transform-origin: center center; }
   .cm-selectionBackground { background: var(--accent) !important; opacity: 0.25; }
   .cm-focused .cm-selectionBackground { background: var(--accent) !important; opacity: 0.25; }
   .cm-gutters { display: none !important; }
@@ -573,6 +575,20 @@
   body[data-theme="terminal"].amber-crt .custom-dropdown,
   body[data-theme="terminal"].amber-crt .cm-cursor { border-left-color: #ffb000 !important; }
 
+  /* ── Retro block cursor (terminal + CRT on) ── */
+  body[data-theme="terminal"].crt-on .cm-cursor,
+  body[data-theme="terminal"].crt-on .cm-dropCursor,
+  body[data-theme="terminal"].amber-crt .cm-cursor,
+  body[data-theme="terminal"].amber-crt .cm-dropCursor {
+    border-left: none !important;
+    width: 1ch !important;
+    background-color: #33ff33;
+    box-shadow: 0 0 10px rgba(51,255,51,0.55), 0 0 3px rgba(51,255,51,0.7);
+    transform: none;
+  }
+  body[data-theme="terminal"].amber-crt .cm-cursor,
+  body[data-theme="terminal"].amber-crt .cm-dropCursor { background-color: #ffb000; box-shadow: 0 0 10px rgba(255,176,0,0.55), 0 0 3px rgba(255,176,0,0.7); }
+
   /* ── Just Write mode ── */
   body.just-write #theme-label { opacity: 0.3; pointer-events: none; cursor: default; }
   body.just-write .settings-theme-list { opacity: 0.3; pointer-events: none; }
@@ -721,6 +737,11 @@
 
   /* ── Syntax dimming ── */
   .cm-syntax-dim { opacity: 0.2; transition: opacity 0.1s; }
+
+  /* ── Zen mode ── */
+  .cm-zen-dim { opacity: 0.3; transition: opacity 0.15s; }
+  body.zen-mode.zen-paragraph .cm-line { opacity: 0.3; transition: opacity 0.15s; }
+  body.zen-mode.zen-paragraph .cm-line.zen-active { opacity: 1; }
 
   /* ── Inline markdown formatting ── */
   .cm-tree-h1, .cm-tree-h2, .cm-tree-h3,
@@ -1246,6 +1267,17 @@
         <label for="chk-typewriter">typewriter mode</label>
       </div>
       <div class="settings-row">
+        <input type="checkbox" id="chk-zen">
+        <label for="chk-zen">zen mode</label>
+      </div>
+      <div class="settings-row" id="zen-granularity-row" style="display:none; padding-left:16px;">
+        <label for="zen-granularity-select" style="min-width:56px;">focus on</label>
+        <select id="zen-granularity-select">
+          <option value="sentence">sentence</option>
+          <option value="paragraph">paragraph</option>
+        </select>
+      </div>
+      <div class="settings-row">
         <input type="checkbox" id="chk-autohide">
         <label for="chk-autohide">autohide toolbar</label>
       </div>
@@ -1313,6 +1345,7 @@
         <div class="keys-row"><kbd>Ctrl+Shift+A</kbd><span>autohide</span></div>
         <div class="keys-row"><kbd>Ctrl+Shift+F</kbd><span>focus</span></div>
         <div class="keys-row"><kbd>Ctrl+Shift+T</kbd><span>typewriter</span></div>
+        <div class="keys-row"><kbd>Ctrl+Shift+G</kbd><span>zen mode</span></div>
         <div class="keys-row"><kbd>Ctrl+Shift+J</kbd><span>just write</span></div>
       </div>
       <div class="keys-group">
@@ -1343,7 +1376,7 @@
     <p class="about-sub">A Markdown Editor</p>
     <p class="about-credit">Vibe coded by Dan</p>
     <p class="about-copy">© 2026</p>
-    <p class="about-version"><span style="font-size:13px;">v1.4</span><span style="font-size:11px; opacity:0.35; margin: 0 5px;">·</span><a href="#" style="font-size:11px; color:var(--accent); opacity:0.5; text-decoration:none;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='0.5'" onclick="document.getElementById('about-overlay').style.display='none'; openReadmeTab(); return false;">readme</a></p>
+    <p class="about-version"><span style="font-size:13px;">v1.5</span><span style="font-size:11px; opacity:0.35; margin: 0 5px;">·</span><a href="#" style="font-size:11px; color:var(--accent); opacity:0.5; text-decoration:none;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='0.5'" onclick="document.getElementById('about-overlay').style.display='none'; openReadmeTab(); return false;">readme</a></p>
     <p style="margin-top:4px; font-size:11px;"><a href="https://buymeacoffee.com/dandanmian" target="_blank" style="color:var(--accent); opacity:0.7; text-decoration:none;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">☕ buy me a coffee</a></p>
   </div>
 </div>
@@ -1476,6 +1509,136 @@ const syntaxDimmingPlugin = ViewPlugin.fromClass(class {
   }
 }, { decorations: v => v.decorations });
 
+// ── Zen mode plugin ──────────────────────────────────────────────────
+let zenModeActive = false;
+let zenGranularity = 'sentence';
+const zenLineDeco = Decoration.line({ class: 'zen-active' });
+const zenDimMark  = Decoration.mark({ class: 'cm-zen-dim' });
+
+function isSentenceTerm(ch) {
+  return ch === '.' || ch === '!' || ch === '?';
+}
+
+function getZenSentenceRange(state) {
+  const pos  = state.selection.main.head;
+  const doc  = state.doc;
+  const text = doc.toString();
+
+  // Find paragraph bounds (delimited by blank lines)
+  let paraStart = 0;
+  for (let i = pos - 1; i >= 0; i--) {
+    if (text[i] === '\n' && i > 0 && text[i - 1] === '\n') { paraStart = i + 1; break; }
+  }
+  let paraEnd = text.length;
+  for (let i = pos; i < text.length; i++) {
+    if (text[i] === '\n' && i + 1 < text.length && text[i + 1] === '\n') { paraEnd = i; break; }
+  }
+
+  const para   = text.slice(paraStart, paraEnd);
+  const relPos = pos - paraStart;
+
+  // Walk backward: find the terminator that ended the previous sentence
+  let sentStart = 0;
+  let prevTermIdx = -1;  // index of the terminator that begins our boundary
+  for (let i = relPos - 1; i >= 0; i--) {
+    if (isSentenceTerm(para[i])) {
+      const next = para[i + 1];
+      // Only a real sentence boundary when followed by whitespace (or end of para)
+      if (!next || /\s/.test(next)) {
+        prevTermIdx = i;
+        let j = i + 1;
+        while (j < relPos && /[ \t\n]/.test(para[j])) j++;
+        sentStart = j;
+        break;
+      }
+    }
+  }
+
+  // If sentStart reached relPos, the user typed a terminator but hasn't started
+  // the next sentence yet — keep the just-completed sentence lit instead.
+  if (sentStart >= relPos && prevTermIdx >= 0) {
+    // Find where the just-completed sentence itself started
+    let completedStart = 0;
+    for (let i = prevTermIdx - 1; i >= 0; i--) {
+      if (isSentenceTerm(para[i])) {
+        const next = para[i + 1];
+        if (!next || /\s/.test(next)) {
+          let j = i + 1;
+          while (j < prevTermIdx && /[ \t\n]/.test(para[j])) j++;
+          completedStart = j;
+          break;
+        }
+      }
+    }
+    // Active range = completed sentence through cursor (includes trailing space)
+    return { from: paraStart + completedStart, to: pos };
+  }
+
+  // Walk forward: find the terminator that ends the current sentence
+  let sentEnd = para.length;
+  for (let i = relPos; i < para.length; i++) {
+    if (isSentenceTerm(para[i])) {
+      sentEnd = i + 1;
+      break;
+    }
+  }
+
+  return { from: paraStart + sentStart, to: Math.min(paraStart + sentEnd, doc.length) };
+}
+
+function getZenParagraphLines(state) {
+  const curLine = state.doc.lineAt(state.selection.main.head);
+
+  // Blank line: cursor just pressed Enter. Activate only this line so
+  // the preceding paragraph dims immediately.
+  if (curLine.text.trim() === '') {
+    return { fromLine: curLine.number, toLine: curLine.number };
+  }
+
+  // Non-blank: active region starts at the cursor line and extends
+  // downward only through contiguous non-blank lines. We never walk
+  // upward — lines above belong to a previous paragraph and stay dim.
+  let e = curLine.number;
+  while (e < state.doc.lines && state.doc.line(e + 1).text.trim() !== '') e++;
+  return { fromLine: curLine.number, toLine: e };
+}
+
+const zenModePlugin = ViewPlugin.fromClass(class {
+  constructor(view) { this.decorations = this._build(view); }
+  update(u) {
+    // Rebuild on doc/selection/viewport changes AND on any dispatched transaction
+    // (the empty dispatch({}) used when toggling zen mode counts as a transaction)
+    if (u.docChanged || u.selectionSet || u.viewportChanged || u.transactions.length)
+      this.decorations = this._build(u.view);
+  }
+  _build(view) {
+    if (!zenModeActive || !view.state.doc.length) return new RangeSetBuilder().finish();
+    const { state } = view;
+    const builder  = new RangeSetBuilder();
+
+    if (zenGranularity === 'sentence') {
+      // Character-level: dim everything outside the current sentence
+      const { from, to } = getZenSentenceRange(state);
+      const len = state.doc.length;
+      if (from > 0)   builder.add(0,   from, zenDimMark);
+      if (to   < len) builder.add(to,  len,  zenDimMark);
+    } else {
+      // Line-level: mark active paragraph lines; CSS dims the rest
+      const { fromLine, toLine } = getZenParagraphLines(state);
+      for (let ln = fromLine; ln <= toLine; ln++) {
+        const line = state.doc.line(ln);
+        builder.add(line.from, line.from, zenLineDeco);
+      }
+    }
+    return builder.finish();
+  }
+}, { decorations: v => v.decorations });
+
+function applyZenBodyClasses() {
+  document.body.classList.toggle('zen-mode',      zenModeActive);
+  document.body.classList.toggle('zen-paragraph', zenModeActive && zenGranularity === 'paragraph');
+}
+
 // ── Inline formatting plugin ──────────────────────────────────────────
 const formatDecos = {
   ATXHeading1:    Decoration.mark({ class: 'cm-tree-h1' }),
@@ -1570,7 +1733,7 @@ const readOnlyCompartment   = new Compartment();
 function buildExtensions() {
   return [
     history(),
-    drawSelection(),
+    drawSelection({ cursorBlinkRate: 1000 }),
     dropCursor(),
     EditorView.lineWrapping,
     EditorState.allowMultipleSelections.of(true),
@@ -1583,6 +1746,7 @@ function buildExtensions() {
     markdown({ base: markdownLanguage }),
     search({ top: true }),
     syntaxDimmingPlugin,
+    zenModePlugin,
     inlineFormattingPlugin,
     lineDecoPlugin,
     spellcheckCompartment.of(EditorView.contentAttributes.of({ spellcheck: 'true' })),
@@ -1625,6 +1789,7 @@ function buildExtensions() {
       { key: 'Ctrl-Shift-r',  run: () => { setMode('preview'); return true; } },
       { key: 'Ctrl-Shift-a',  run: () => { toggleAutohide();   return true; } },
       { key: 'Ctrl-Shift-t',  run: () => { toggleTypewriter(); return true; } },
+      { key: 'Ctrl-Shift-g',  run: () => { toggleZen();        return true; } },
       { key: 'Ctrl-Shift-f',  run: () => { if (focusActive) exitFocus(); else enterFocus(); return true; } },
       { key: 'Ctrl-/',        run: () => { toggleKeysPanel();  return true; } },
       ...defaultKeymap,
@@ -1703,6 +1868,7 @@ function buildExtensions() {
 function toggleAutohide() {
   autohideEnabled = !autohideEnabled;
   document.getElementById('chk-autohide').checked = autohideEnabled;
+  document.body.classList.toggle('autohide-on', autohideEnabled);
   if (!autohideEnabled) {
     clearTimeout(autohideTimer);
     document.body.classList.remove('toolbar-hidden', 'toolbar-peek');
@@ -1715,6 +1881,15 @@ function toggleTypewriter() {
   document.getElementById('chk-typewriter').checked = typewriterMode;
   setTypewriterPadding(typewriterMode);
   if (typewriterMode) applyTypewriterScroll();
+  saveSettings();
+}
+
+function toggleZen() {
+  zenModeActive = !zenModeActive;
+  document.getElementById('chk-zen').checked = zenModeActive;
+  document.getElementById('zen-granularity-row').style.display = zenModeActive ? '' : 'none';
+  applyZenBodyClasses();
+  if (view) view.dispatch({});
   saveSettings();
 }
 
@@ -2371,6 +2546,7 @@ document.getElementById('settings-font-size-select').addEventListener('change', 
 // ── Autohide ─────────────────────────────────────────────────────────
 document.getElementById('chk-autohide').addEventListener('change', function() {
   autohideEnabled = this.checked;
+  document.body.classList.toggle('autohide-on', autohideEnabled);
   if (!autohideEnabled) {
     clearTimeout(autohideTimer);
     document.body.classList.remove('toolbar-hidden', 'toolbar-peek');
@@ -2423,7 +2599,7 @@ function setupAutohideZone() {
     } else {
       document.body.classList.remove('toolbar-peek');
       if (!isModalOpen()) {
-        autohideTimer = setTimeout(hideToolbar, 2000);
+        autohideTimer = setTimeout(hideToolbar, 600);
       }
     }
   });
@@ -2820,6 +2996,8 @@ function saveSettings() {
       showCursor:   document.getElementById('chk-show-cursor').checked,
       spellcheck:    document.getElementById('chk-spellcheck').checked,
       typewriterMode: typewriterMode,
+      zenMode:        zenModeActive,
+      zenGranularity: zenGranularity,
       previewFont:   document.getElementById('preview-font-select').value,
       mode:          currentMode,
     }));
@@ -2850,6 +3028,7 @@ function loadSettings() {
     if (s.autohide) {
       autohideEnabled = true;
       document.getElementById('chk-autohide').checked = true;
+      document.body.classList.add('autohide-on');
     }
     if (s.showWelcome !== undefined) {
       document.getElementById('chk-welcome').checked = s.showWelcome;
@@ -2873,6 +3052,16 @@ function loadSettings() {
       typewriterMode = true;
       document.getElementById('chk-typewriter').checked = true;
       setTypewriterPadding(true);
+    }
+    if (s.zenGranularity) {
+      zenGranularity = s.zenGranularity;
+      document.getElementById('zen-granularity-select').value = s.zenGranularity;
+    }
+    if (s.zenMode) {
+      zenModeActive = true;
+      document.getElementById('chk-zen').checked = true;
+      document.getElementById('zen-granularity-row').style.display = '';
+      applyZenBodyClasses();
     }
     if (s.previewFont !== undefined) {
       document.getElementById('preview-font-select').value = s.previewFont;
@@ -2907,6 +3096,21 @@ document.getElementById('chk-typewriter').addEventListener('change', function() 
   typewriterMode = this.checked;
   setTypewriterPadding(typewriterMode);
   if (typewriterMode) applyTypewriterScroll();
+  saveSettings();
+});
+
+document.getElementById('chk-zen').addEventListener('change', function() {
+  zenModeActive = this.checked;
+  document.getElementById('zen-granularity-row').style.display = zenModeActive ? '' : 'none';
+  applyZenBodyClasses();
+  if (view) view.dispatch({});
+  saveSettings();
+});
+
+document.getElementById('zen-granularity-select').addEventListener('change', function() {
+  zenGranularity = this.value;
+  applyZenBodyClasses();
+  if (view) view.dispatch({});
   saveSettings();
 });
 
@@ -3137,7 +3341,7 @@ document.addEventListener('keydown', e => {
 
 // ── README tab ────────────────────────────────────────────────────────
 const README_CONTENT = `TREE EDITOR
-Version 1.4
+Version 1.5
 
 A distraction-free markdown editor built on CodeMirror 6.
 
@@ -3194,6 +3398,7 @@ KEYBOARD SHORTCUTS
     Ctrl+Shift+A    Toggle autohide toolbar
     Ctrl+Shift+F    Toggle focus mode
     Ctrl+Shift+T    Toggle typewriter mode
+    Ctrl+Shift+G    Toggle zen mode
     Ctrl+Shift+J    Activate Just Write mode
     Ctrl+/          Open shortcut reference
 
@@ -3221,6 +3426,17 @@ TYPEWRITER MODE  (Ctrl+Shift+T)
   Ctrl+Shift+T.
 
 
+ZEN MODE  (Ctrl+Shift+G)
+
+  Dims everything except what you're currently writing, so the
+  rest of the document fades into the background.
+
+  Choose sentence or paragraph granularity in Settings. Sentence
+  mode keeps the current sentence lit until you begin the next
+  one. Paragraph mode dims previous paragraphs the moment you
+  press Enter. Works in both regular and typewriter mode.
+
+
 JUST WRITE MODE  (Ctrl+Shift+J)
 
   Locks your theme and font for 30 minutes so you stop fussing
@@ -3232,6 +3448,13 @@ FOCUS MODE  (Ctrl+Shift+F)
 
   Hides the toolbar and enters fullscreen. Hover near the top to
   peek at the toolbar or status bar. Press Esc to exit.
+
+
+AUTOHIDE TOOLBAR  (Ctrl+Shift+A)
+
+  The toolbar slides out of view when your cursor moves into the
+  document and reappears when you move back to the top. It overlays
+  the editor when visible so your text never shifts.
 
 
 WORD MENU
@@ -3280,7 +3503,10 @@ THEMES & FONTS
   choose a theme, toggle CRT mode, and adjust font and size.
   Custom theme lets you set your own background, text, and accent.
 
-  In terminal theme, try the Konami code for something extra.
+  In terminal theme, CRT mode adds scanlines, a vignette, subtle
+  screen flicker, and replaces the cursor with a glowing block.
+
+  Try the Konami code in terminal theme for something extra.
 
 
 ─────────────────────────────────────────────────────────────────
