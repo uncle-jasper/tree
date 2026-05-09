@@ -305,6 +305,7 @@
     background: transparent !important;
     outline: none !important;
     color: var(--text);
+    position: relative;
   }
   .cm-editor.cm-focused { outline: none !important; }
   .cm-scroller {
@@ -697,7 +698,7 @@
 
   /* ── CM6 search panel ── */
   .cm-panels { background: var(--surface) !important; border: none !important; }
-  .cm-panels-top { border-bottom: 1px solid var(--border) !important; position: sticky; top: 0; z-index: 10; }
+  .cm-panels-top { border-bottom: 1px solid var(--border) !important; position: absolute !important; top: 0; left: 0; right: 0; z-index: 20; }
   .cm-search {
     background: var(--surface) !important;
     padding: 7px 12px !important;
@@ -781,6 +782,13 @@
     opacity: 0.9;
     font-weight: 600;
     border-bottom: 1px solid var(--border);
+  }
+  .wm-count {
+    padding: 3px 12px 5px;
+    font-size: 9px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    opacity: 0.7;
   }
   .wm-item {
     display: block;
@@ -1342,7 +1350,7 @@
       </div>
       <div class="keys-group">
         <div class="keys-group-title">tools</div>
-        <div class="keys-row"><kbd>Ctrl+Shift+A</kbd><span>autohide</span></div>
+        <div class="keys-row"><kbd>Ctrl+Shift+H</kbd><span>autohide</span></div>
         <div class="keys-row"><kbd>Ctrl+Shift+F</kbd><span>focus</span></div>
         <div class="keys-row"><kbd>Ctrl+Shift+T</kbd><span>typewriter</span></div>
         <div class="keys-row"><kbd>Ctrl+Shift+G</kbd><span>zen mode</span></div>
@@ -1376,7 +1384,7 @@
     <p class="about-sub">A Markdown Editor</p>
     <p class="about-credit">Vibe coded by Dan</p>
     <p class="about-copy">© 2026</p>
-    <p class="about-version"><span style="font-size:13px;">v1.5</span><span style="font-size:11px; opacity:0.35; margin: 0 5px;">·</span><a href="#" style="font-size:11px; color:var(--accent); opacity:0.5; text-decoration:none;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='0.5'" onclick="document.getElementById('about-overlay').style.display='none'; openReadmeTab(); return false;">readme</a></p>
+    <p class="about-version"><span style="font-size:13px;">v1.5.1</span><span style="font-size:11px; opacity:0.35; margin: 0 5px;">·</span><a href="#" style="font-size:11px; color:var(--accent); opacity:0.5; text-decoration:none;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='0.5'" onclick="document.getElementById('about-overlay').style.display='none'; openReadmeTab(); return false;">readme</a></p>
     <p style="margin-top:4px; font-size:11px;"><a href="https://buymeacoffee.com/dandanmian" target="_blank" style="color:var(--accent); opacity:0.7; text-decoration:none;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">☕ buy me a coffee</a></p>
   </div>
 </div>
@@ -1787,7 +1795,7 @@ function buildExtensions() {
       { key: 'Ctrl-Shift-e',  run: () => { setMode('write');   return true; } },
       { key: 'Ctrl-Shift-d',  run: () => { setMode('split');   return true; } },
       { key: 'Ctrl-Shift-r',  run: () => { setMode('preview'); return true; } },
-      { key: 'Ctrl-Shift-a',  run: () => { toggleAutohide();   return true; } },
+      { key: 'Ctrl-Shift-h',  run: () => { toggleAutohide();   return true; } },
       { key: 'Ctrl-Shift-t',  run: () => { toggleTypewriter(); return true; } },
       { key: 'Ctrl-Shift-g',  run: () => { toggleZen();        return true; } },
       { key: 'Ctrl-Shift-f',  run: () => { if (focusActive) exitFocus(); else enterFocus(); return true; } },
@@ -1838,6 +1846,7 @@ function buildExtensions() {
           selection: EditorSelection.cursor(from + selected.length + text.length + 4),
           userEvent: 'input',
         });
+        if (document.getElementById('chk-welcome').checked) typeStatusMessage('linked.');
         return true;
       }
     }),
@@ -1873,6 +1882,7 @@ function toggleAutohide() {
     clearTimeout(autohideTimer);
     document.body.classList.remove('toolbar-hidden', 'toolbar-peek');
   }
+  if (document.getElementById('chk-welcome').checked) typeStatusMessage(autohideEnabled ? 'toolbar will autohide.' : 'toolbar pinned.');
   saveSettings();
 }
 
@@ -1881,6 +1891,7 @@ function toggleTypewriter() {
   document.getElementById('chk-typewriter').checked = typewriterMode;
   setTypewriterPadding(typewriterMode);
   if (typewriterMode) applyTypewriterScroll();
+  if (document.getElementById('chk-welcome').checked) typeStatusMessage(typewriterMode ? 'typewriter on.' : 'typewriter off.');
   saveSettings();
 }
 
@@ -1890,6 +1901,7 @@ function toggleZen() {
   document.getElementById('zen-granularity-row').style.display = zenModeActive ? '' : 'none';
   applyZenBodyClasses();
   if (view) view.dispatch({});
+  if (document.getElementById('chk-welcome').checked) typeStatusMessage(zenModeActive ? 'zen mode on.' : 'zen mode off.');
   saveSettings();
 }
 
@@ -2303,6 +2315,8 @@ function setMode(mode) {
     prev.classList.add('visible');
     renderPreview();
   }
+  const modeLabels = { write: 'editor only.', split: 'split view.', preview: 'preview.' };
+  if (document.getElementById('chk-welcome').checked) typeStatusMessage(modeLabels[mode]);
   saveSettings();
 }
 
@@ -2573,6 +2587,11 @@ function revealToolbar() {
   setTimeout(() => document.body.classList.remove('toolbar-hidden'), 310);
 }
 
+function isSearchPanelOpen() {
+  const panel = document.querySelector('.cm-panels-top');
+  return !!(panel && panel.offsetHeight > 0);
+}
+
 function setupAutohideZone() {
   document.addEventListener('mousemove', e => {
     const y = e.clientY;
@@ -2580,7 +2599,7 @@ function setupAutohideZone() {
 
     // Focus mode: reveal header on hover near top, independent of autohide
     if (focusActive) {
-      if (y <= headerH + 20) {
+      if (!isSearchPanelOpen() && y <= headerH + 20) {
         document.body.classList.add('toolbar-peek');
       } else {
         document.body.classList.remove('toolbar-peek');
@@ -2591,7 +2610,7 @@ function setupAutohideZone() {
     if (!autohideEnabled) return;
     clearTimeout(autohideTimer);
 
-    if (y <= headerH) {
+    if (!isSearchPanelOpen() && y <= headerH) {
       clearTimeout(autohideTimer);
       if (document.body.classList.contains('toolbar-hidden')) {
         revealToolbar();
@@ -2627,6 +2646,7 @@ function enterFocus() {
     document.documentElement.requestFullscreen().catch(() => {});
   }
   if (view) view.focus();
+  if (document.getElementById('chk-welcome').checked) typeStatusMessage('focus mode.');
 }
 
 function exitFocus() {
@@ -2643,8 +2663,8 @@ document.addEventListener('fullscreenchange', () => {
   if (!document.fullscreenElement && focusActive) exitFocus();
 });
 
-// ── Word frequency ────────────────────────────────────────────────────
-document.getElementById('editor-cm').addEventListener('dblclick', () => {
+// ── Word menu (double-click) ───────────────────────────────────────────
+document.getElementById('editor-cm').addEventListener('dblclick', e => {
   if (!view) return;
   const sel = view.state.sliceDoc(
     view.state.selection.main.from,
@@ -2653,7 +2673,7 @@ document.getElementById('editor-cm').addEventListener('dblclick', () => {
   if (!sel || sel.includes(' ')) return;
   const text  = getContent().toLowerCase();
   const count = (text.match(new RegExp('\\b' + sel.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '\\b', 'g')) || []).length;
-  if (count > 0) typeStatusMessage('"' + sel + '" appears ' + count + ' time' + (count !== 1 ? 's' : ''));
+  showWordMenu(e.clientX, e.clientY, sel, count);
 });
 
 // ── Tabs ──────────────────────────────────────────────────────────────
@@ -2895,6 +2915,10 @@ document.getElementById('file-open').addEventListener('change', function() {
     updateStats();
     updateCursor();
     renderPreview();
+    if (document.getElementById('chk-welcome').checked) {
+      const label = f.name.length > 22 ? f.name.slice(0, 20) + '…' : f.name;
+      typeStatusMessage('opened ' + label + '.');
+    }
   };
   reader.readAsText(f);
   this.value = '';
@@ -3096,6 +3120,7 @@ document.getElementById('chk-typewriter').addEventListener('change', function() 
   typewriterMode = this.checked;
   setTypewriterPadding(typewriterMode);
   if (typewriterMode) applyTypewriterScroll();
+  if (document.getElementById('chk-welcome').checked) typeStatusMessage(typewriterMode ? 'typewriter on.' : 'typewriter off.');
   saveSettings();
 });
 
@@ -3104,6 +3129,7 @@ document.getElementById('chk-zen').addEventListener('change', function() {
   document.getElementById('zen-granularity-row').style.display = zenModeActive ? '' : 'none';
   applyZenBodyClasses();
   if (view) view.dispatch({});
+  if (document.getElementById('chk-welcome').checked) typeStatusMessage(zenModeActive ? 'zen mode on.' : 'zen mode off.');
   saveSettings();
 });
 
@@ -3149,9 +3175,13 @@ const wordMenu = document.getElementById('word-menu');
 
 function hideWordMenu() { wordMenu.style.display = 'none'; }
 
-function showWordMenu(x, y, word) {
+function showWordMenu(x, y, word, count) {
+  const countLine = (count !== undefined && count > 0)
+    ? `<div class="wm-count">${count} occurrence${count !== 1 ? 's' : ''}</div>`
+    : '';
   wordMenu.innerHTML = `
     <div class="wm-header">${word}</div>
+    ${countLine}
     <button class="wm-item" id="wm-define">define</button>
     <button class="wm-item" id="wm-synonyms">synonyms</button>
     <div class="wm-result" id="wm-result"></div>
@@ -3207,16 +3237,8 @@ async function fetchWordData(word, mode) {
   }
 }
 
-document.getElementById('editor-cm').addEventListener('contextmenu', e => {
-  e.preventDefault();
-  if (!view) return;
-  const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
-  if (pos === null) return;
-  const wordRange = view.state.wordAt(pos);
-  if (!wordRange) return;
-  const word = view.state.sliceDoc(wordRange.from, wordRange.to).replace(/[^a-zA-Z'-]/g, '').trim();
-  if (!word || word.length < 2) return;
-  showWordMenu(e.clientX, e.clientY, word);
+document.getElementById('editor-cm').addEventListener('contextmenu', () => {
+  hideWordMenu();
 });
 
 document.addEventListener('click', e => {
@@ -3341,7 +3363,7 @@ document.addEventListener('keydown', e => {
 
 // ── README tab ────────────────────────────────────────────────────────
 const README_CONTENT = `TREE EDITOR
-Version 1.5
+Version 1.5.1
 
 A distraction-free markdown editor built on CodeMirror 6.
 
@@ -3395,7 +3417,7 @@ KEYBOARD SHORTCUTS
     Ctrl+Shift+R    Preview mode (rendered only)
 
   Tools
-    Ctrl+Shift+A    Toggle autohide toolbar
+    Ctrl+Shift+H    Toggle autohide toolbar
     Ctrl+Shift+F    Toggle focus mode
     Ctrl+Shift+T    Toggle typewriter mode
     Ctrl+Shift+G    Toggle zen mode
@@ -3450,7 +3472,7 @@ FOCUS MODE  (Ctrl+Shift+F)
   peek at the toolbar or status bar. Press Esc to exit.
 
 
-AUTOHIDE TOOLBAR  (Ctrl+Shift+A)
+AUTOHIDE TOOLBAR  (Ctrl+Shift+H)
 
   The toolbar slides out of view when your cursor moves into the
   document and reappears when you move back to the top. It overlays
@@ -3459,9 +3481,11 @@ AUTOHIDE TOOLBAR  (Ctrl+Shift+A)
 
 WORD MENU
 
-  Right-click any word for: Define, Synonyms, and spell-check
-  suggestions. Powered by the Free Dictionary API. Requires
-  internet for definitions and synonyms; spell-check works offline.
+  Double-click any word to open the word menu: Define, Synonyms,
+  and occurrence count. Powered by the Free Dictionary API.
+  Requires internet for definitions and synonyms.
+
+  Right-click any word for native spell-check suggestions.
 
 
 TABS
@@ -3470,12 +3494,6 @@ TABS
   Tab names come from the first line of content.
   Double-click a tab name to rename it.
   Pin the tab bar so it stays visible.
-
-
-WORD FREQUENCY
-
-  Double-click any word in the editor to see how many times it
-  appears in the document.
 
 
 LIBRARY  (click › to open)
