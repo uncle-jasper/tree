@@ -667,6 +667,8 @@
   .settings-row label { font-size: 10px; color: var(--muted); cursor: pointer; opacity: 0.8; }
   .settings-divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; opacity: 0.5; }
   .settings-row select { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 11px; outline: none; padding: 3px 6px; cursor: pointer; }
+  .stat-side-select { margin-left: auto; flex-shrink: 0; background: var(--bg); border: 1px solid var(--border); border-radius: 3px; color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 1px 2px; outline: none; cursor: pointer; opacity: 0.7; }
+  .stat-side-select:hover { opacity: 1; }
   #about-icon { width: 64px; height: 64px; border-radius: 14px; margin-bottom: 16px; }
   #about-modal h2 { font-size: 1.4em; font-weight: 700; margin-bottom: 4px; letter-spacing: 0.05em; }
   .about-sub { color: var(--muted); font-size: 0.85em; margin-bottom: 20px; }
@@ -966,6 +968,155 @@
   }
   #sidebar-toggle:hover { opacity: 1; }
 
+  /* ── Notes sidebar ── */
+  #notes-sidebar {
+    width: 0;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-left: 1px solid transparent;
+    transition: width 0.25s ease, border-color 0.25s;
+    display: flex;
+    flex-direction: column;
+  }
+  body.notes-open #notes-sidebar { width: 220px; border-left-color: var(--border); }
+  #notes-sidebar-inner {
+    width: 220px;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 24px;
+  }
+  #notes-sidebar-header {
+    padding: 12px 14px 8px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.4;
+    flex-shrink: 0;
+  }
+  #notes-toggle {
+    width: 16px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    border-left: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 11px;
+    opacity: 0.3;
+    transition: opacity 0.15s;
+    padding: 0;
+  }
+  #notes-toggle:hover { opacity: 1; }
+  #notes-empty { padding: 8px 14px; font-size: 11px; opacity: 0.35; font-style: italic; }
+  .note-item { border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; }
+  .note-anchor-preview {
+    padding: 8px 14px 6px;
+    font-size: 11px;
+    opacity: 0.5;
+    font-style: italic;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: opacity 0.1s;
+  }
+  .note-item:hover .note-anchor-preview,
+  .note-item.active .note-anchor-preview { opacity: 0.9; }
+  .note-body-wrap { padding: 0 14px 10px; }
+  .note-body-text { font-size: 11px; opacity: 0.8; white-space: pre-wrap; word-break: break-word; margin-bottom: 6px; line-height: 1.5; }
+  .note-body-actions { display: flex; gap: 8px; align-items: center; }
+  .note-delete, .note-edit-btn {
+    background: none; border: none; font-family: inherit; font-size: 10px;
+    color: var(--text); opacity: 0.35; cursor: pointer; padding: 2px 0;
+  }
+  .note-delete:hover, .note-edit-btn:hover { opacity: 1; }
+  .note-body-edit {
+    width: 100%; box-sizing: border-box;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 3px;
+    color: var(--text); font-family: inherit; font-size: 11px;
+    padding: 5px 7px; resize: vertical; min-height: 56px; outline: none;
+    margin-bottom: 6px;
+  }
+  .note-body-edit:focus { border-color: var(--accent); }
+  .note-edit-save-btn {
+    background: none; border: none; font-family: inherit; font-size: 10px;
+    color: var(--accent); opacity: 0.75; cursor: pointer; padding: 2px 0;
+  }
+  .note-edit-save-btn:hover { opacity: 1; }
+  /* ── Note hover tooltip ── */
+  .cm-note-tooltip {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 11px;
+    font-size: 12px;
+    max-width: 260px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.55;
+    color: var(--text);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+    animation: noteTooltipIn 0.18s ease;
+    pointer-events: none;
+  }
+  @keyframes noteTooltipIn {
+    from { opacity: 0; transform: translateY(3px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .cm-note-anchor {
+    border-bottom: 1.5px solid color-mix(in srgb, var(--accent) 55%, transparent);
+    padding-bottom: 1px;
+  }
+  /* ── Note input overlay ── */
+  #note-input-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 900;
+    align-items: center;
+    justify-content: center;
+  }
+  #note-input-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    width: 320px;
+    max-width: 90vw;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  #note-input-box label { font-size: 11px; opacity: 0.45; letter-spacing: 0.06em; text-transform: uppercase; }
+  #note-input-textarea {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 8px;
+    resize: vertical;
+    min-height: 80px;
+    outline: none;
+  }
+  #note-input-textarea:focus { border-color: var(--accent); }
+  .note-input-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .note-input-btn {
+    background: none; border: 1px solid var(--border); border-radius: 4px;
+    color: var(--text); cursor: pointer; font-family: inherit; font-size: 11px;
+    padding: 4px 12px; opacity: 0.65; transition: opacity 0.1s;
+  }
+  .note-input-btn:hover { opacity: 1; }
+  .note-input-btn.primary { border-color: var(--accent); opacity: 1; }
+
   /* ── Quick settings popover ── */
   #quick-settings {
     display: none;
@@ -1082,7 +1233,7 @@
   <div class="tool-group">
     <button id="btn-save" title="Save file (Ctrl+S)">⬇ save</button>
     <button id="btn-open" title="Open file">⬆ open</button>
-    <button id="btn-wp-draft" title="Send to WordPress as draft">↑ wp</button>
+    <button id="btn-wp-draft" title="Send to WordPress as draft" style="display:none">↑ wp</button>
     <input id="file-open" type="file" accept=".md,.txt" style="display:none">
     <input id="filename-input" type="text" value="untitled.md" style="display:none" spellcheck="false">
   </div>
@@ -1217,6 +1368,25 @@
     <button id="btn-sync-scroll" title="Toggle scroll sync">⇅</button>
   </div>
   <div id="preview"></div>
+  <button id="notes-toggle" title="Toggle notes">◂</button>
+  <div id="notes-sidebar">
+    <div id="notes-sidebar-inner">
+      <div id="notes-sidebar-header">notes</div>
+      <div id="notes-list"></div>
+      <div id="notes-empty">no notes yet.</div>
+    </div>
+  </div>
+</div>
+
+<div id="note-input-overlay" style="display:none">
+  <div id="note-input-box">
+    <label>add note</label>
+    <textarea id="note-input-textarea" rows="4" placeholder="note text…" spellcheck="false"></textarea>
+    <div class="note-input-actions">
+      <button class="note-input-btn" id="note-cancel-btn">cancel</button>
+      <button class="note-input-btn primary" id="note-confirm-btn">add note</button>
+    </div>
+  </div>
 </div>
 
 <div id="statusbar">
@@ -1224,6 +1394,7 @@
     <span id="word-count">0 words</span>
     <span id="char-count">0 chars</span>
     <span id="line-count">1 line</span>
+    <span id="note-count" style="display:none">0 notes</span>
   </div>
   <div class="stat-centre">
     <span id="read-time"></span>
@@ -1245,12 +1416,27 @@
     <div class="settings-section">
       <h3>Status bar</h3>
       <div class="settings-row">
+        <label>word count</label>
+        <select class="stat-side-select" data-stat="word-count">
+          <option value="left">← left</option>
+          <option value="right">right →</option>
+        </select>
+      </div>
+      <div class="settings-row">
         <input type="checkbox" id="chk-show-chars" checked>
         <label for="chk-show-chars">character count</label>
+        <select class="stat-side-select" data-stat="char-count">
+          <option value="left">← left</option>
+          <option value="right">right →</option>
+        </select>
       </div>
       <div class="settings-row">
         <input type="checkbox" id="chk-show-lines" checked>
         <label for="chk-show-lines">line count</label>
+        <select class="stat-side-select" data-stat="line-count">
+          <option value="left">← left</option>
+          <option value="right">right →</option>
+        </select>
       </div>
       <div class="settings-row">
         <input type="checkbox" id="chk-show-readtime" checked>
@@ -1259,6 +1445,18 @@
       <div class="settings-row">
         <input type="checkbox" id="chk-show-cursor" checked>
         <label for="chk-show-cursor">cursor position</label>
+        <select class="stat-side-select" data-stat="cursor-pos">
+          <option value="left">← left</option>
+          <option value="right">right →</option>
+        </select>
+      </div>
+      <div class="settings-row">
+        <input type="checkbox" id="chk-show-notes">
+        <label for="chk-show-notes">note count</label>
+        <select class="stat-side-select" data-stat="note-count">
+          <option value="left">← left</option>
+          <option value="right">right →</option>
+        </select>
       </div>
     </div>
     <hr class="settings-divider">
@@ -1309,6 +1507,10 @@
     <hr class="settings-divider">
     <div class="settings-section">
       <h3>WordPress</h3>
+      <div class="settings-row" style="margin-bottom:10px;">
+        <input type="checkbox" id="chk-show-wp">
+        <label for="chk-show-wp">show in toolbar</label>
+      </div>
       <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
         <input type="url" id="wp-url" class="wp-input" placeholder="https://yoursite.com" spellcheck="false" autocomplete="off">
         <input type="text" id="wp-username" class="wp-input" placeholder="username" spellcheck="false" autocomplete="off">
@@ -1349,6 +1551,8 @@
         <div class="keys-row"><kbd>Ctrl+Shift+A</kbd><span>write</span></div>
         <div class="keys-row"><kbd>Ctrl+Shift+S</kbd><span>split</span></div>
         <div class="keys-row"><kbd>Ctrl+Shift+D</kbd><span>preview</span></div>
+        <div class="keys-row"><kbd>Ctrl+Shift+L</kbd><span>library</span></div>
+        <div class="keys-row"><kbd>Ctrl+Shift+E</kbd><span>notes panel</span></div>
       </div>
       <div class="keys-group">
         <div class="keys-group-title">tools</div>
@@ -1362,6 +1566,12 @@
         <div class="keys-group-title">history</div>
         <div class="keys-row"><kbd>Ctrl+Z</kbd><span>undo</span></div>
         <div class="keys-row"><kbd>Ctrl+Shift+Z</kbd><span>redo</span></div>
+      </div>
+      <div class="keys-group">
+        <div class="keys-group-title">notes</div>
+        <div class="keys-row"><kbd>Ctrl+Shift+M</kbd><span>add note</span></div>
+        <div class="keys-row"><kbd>Ctrl+Shift+.</kbd><span>next note</span></div>
+        <div class="keys-row"><kbd>Ctrl+Shift+,</kbd><span>prev note</span></div>
       </div>
     </div>
     <div class="keys-footer">Esc or click outside to close · Ctrl+/ to reopen</div>
@@ -1386,7 +1596,7 @@
     <p class="about-sub">A Markdown Editor</p>
     <p class="about-credit">Vibe coded by Dan</p>
     <p class="about-copy">© 2026</p>
-    <p class="about-version"><span style="font-size:13px;">v1.5.2</span><span style="font-size:11px; opacity:0.35; margin: 0 5px;">·</span><a href="#" style="font-size:11px; color:var(--accent); opacity:0.5; text-decoration:none;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='0.5'" onclick="document.getElementById('about-overlay').style.display='none'; openReadmeTab(); return false;">readme</a></p>
+    <p class="about-version"><span style="font-size:13px;">v1.6</span><span style="font-size:11px; opacity:0.35; margin: 0 5px;">·</span><a href="#" style="font-size:11px; color:var(--accent); opacity:0.5; text-decoration:none;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='0.5'" onclick="document.getElementById('about-overlay').style.display='none'; openReadmeTab(); return false;">readme</a></p>
     <p style="margin-top:4px; font-size:11px;"><a href="https://buymeacoffee.com/dandanmian" target="_blank" style="color:var(--accent); opacity:0.7; text-decoration:none;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">☕ buy me a coffee</a></p>
   </div>
 </div>
@@ -1449,6 +1659,7 @@ const { syntaxHighlighting, defaultHighlightStyle, syntaxTree, indentUnit } = CM
 const {
   search, searchKeymap, openSearchPanel, closeSearchPanel
 } = CM6;
+const { hoverTooltip } = CM6;
 
 // ── Constants ────────────────────────────────────────────────────────
 const SETTINGS_KEY = 'tree-editor-settings';
@@ -1460,6 +1671,7 @@ const VERSION      = '1.5.2';
 
 // ── State variables ──────────────────────────────────────────────────
 let currentMode     = 'write';
+let isInitializing  = true;
 let autohideEnabled = false;
 let focusActive     = false;
 let scrollSynced      = true;
@@ -1469,6 +1681,7 @@ let editorSyncedAt    = 0; // timestamp: editor was last scrolled by sync (suppr
 let previewSyncedAt   = 0; // timestamp: preview was last scrolled by sync (suppress its echo)
 const SYNC_GUARD      = 80; // ms
 let statusMsgBusy   = false;
+let _msgT1 = null, _msgT2 = null, _msgT3 = null, _msgIv = null;
 let tabBarPinned    = false;
 let isDirty         = false;
 let fileHandle      = null;
@@ -1777,6 +1990,73 @@ const lineDecoPlugin = ViewPlugin.fromClass(class {
   }
 }, { decorations: v => v.decorations });
 
+// ── Margin notes ──────────────────────────────────────────────────────
+const NOTES_KEY_PREFIX  = 'tree-notes-';
+const NOTE_DRAFT_KEY    = 'tree-note-draft';
+
+const addNoteEffect    = StateEffect.define();
+const removeNoteEffect = StateEffect.define();
+
+const notesField = StateField.define({
+  create: () => [],
+  update(notes, tr) {
+    let result = notes;
+    if (tr.docChanged) {
+      result = result.map(n => ({
+        ...n,
+        from: tr.changes.mapPos(n.from, -1),
+        to:   tr.changes.mapPos(n.to,   1),
+      })).filter(n => n.from < n.to);
+    }
+    for (const effect of tr.effects) {
+      if (effect.is(addNoteEffect))    result = [...result, effect.value];
+      if (effect.is(removeNoteEffect)) result = result.filter(n => n.id !== effect.value);
+    }
+    return result;
+  }
+});
+
+const noteAnchorMark = Decoration.mark({ class: 'cm-note-anchor' });
+
+const noteDecoPlugin = ViewPlugin.fromClass(class {
+  constructor(view) { this.decorations = this._build(view); }
+  update(upd) {
+    if (upd.docChanged || upd.viewportChanged ||
+        upd.startState.field(notesField) !== upd.state.field(notesField))
+      this.decorations = this._build(upd.view);
+  }
+  _build(view) {
+    const notes = view.state.field(notesField, false);
+    if (!notes || !notes.length) return Decoration.none;
+    const builder = new RangeSetBuilder();
+    const sorted  = [...notes].sort((a, b) => a.from - b.from);
+    const len     = view.state.doc.length;
+    for (const n of sorted) {
+      const f = Math.min(n.from, len), t = Math.min(n.to, len);
+      if (f < t) builder.add(f, t, noteAnchorMark);
+    }
+    return builder.finish();
+  }
+}, { decorations: v => v.decorations });
+
+const noteHoverTooltip = hoverTooltip((view, pos) => {
+  const notes = view.state.field(notesField, false);
+  if (!notes || !notes.length) return null;
+  const note = notes.find(n => pos >= n.from && pos < n.to);
+  if (!note) return null;
+  return {
+    pos:   note.from,
+    end:   note.to,
+    above: true,
+    create() {
+      const dom = document.createElement('div');
+      dom.className = 'cm-note-tooltip';
+      dom.textContent = note.body;
+      return { dom };
+    }
+  };
+}, { hoverTime: 250 });
+
 // ── CodeMirror 6 setup ───────────────────────────────────────────────
 const spellcheckCompartment = new Compartment();
 const readOnlyCompartment   = new Compartment();
@@ -1796,11 +2076,14 @@ function buildExtensions() {
        and other elements; we handle all styling through inlineFormattingPlugin */
     markdown({ base: markdownLanguage }),
     search({ top: true }),
+    notesField,
     syntaxDimmingPlugin,
     linkDimmingPlugin,
     zenModePlugin,
     inlineFormattingPlugin,
     lineDecoPlugin,
+    noteDecoPlugin,
+    noteHoverTooltip,
     spellcheckCompartment.of(EditorView.contentAttributes.of({ spellcheck: 'true' })),
     readOnlyCompartment.of(EditorState.readOnly.of(false)),
     keymap.of([
@@ -1849,7 +2132,12 @@ function buildExtensions() {
       { key: 'Ctrl-Shift-t',  run: () => { toggleTypewriter(); return true; } },
       { key: 'Ctrl-Shift-g',  run: () => { toggleZen();        return true; } },
       { key: 'Ctrl-Shift-f',  run: () => { if (focusActive) exitFocus(); else enterFocus(); return true; } },
-      { key: 'Ctrl-/',        run: () => { toggleKeysPanel();  return true; } },
+      { key: 'Ctrl-/',        run: () => { toggleKeysPanel();       return true; } },
+      { key: 'Ctrl-Shift-l', run: () => { toggleSidebar();         return true; } },
+      { key: 'Ctrl-Shift-e', run: () => { toggleNotesSidebar();    return true; } },
+      { key: 'Ctrl-Shift-m', run: () => { createNoteFromSelection(); return true; } },
+      { key: 'Ctrl-Shift-.', run: () => { navigateNote(1);  return true; } },
+      { key: 'Ctrl-Shift-,', run: () => { navigateNote(-1); return true; } },
       ...defaultKeymap,
       ...historyKeymap,
       ...searchKeymap,
@@ -1896,7 +2184,7 @@ function buildExtensions() {
           selection: EditorSelection.cursor(from + selected.length + text.length + 4),
           userEvent: 'input',
         });
-        if (document.getElementById('chk-welcome').checked) typeStatusMessage('linked.');
+        if (document.getElementById('chk-welcome').checked) typeStatusMessage('linked.', true);
         return true;
       }
     }),
@@ -2083,8 +2371,11 @@ function onEditorUpdate(update) {
     resetIdle();
     syncTabName();
     if (!typewriterMode) ensureCursorPadding();
+    saveNotes();
+    if (notesSidebarOpen) renderNotesSidebar();
   }
-  if (update.docChanged || update.selectionSet) {
+  if (update.docChanged || update.selectionSet ||
+      update.startState.field(notesField) !== update.state.field(notesField)) {
     updateStats();
     updateCursor();
     applyTypewriterScroll();
@@ -2129,6 +2420,14 @@ function updateStats() {
     if (!statusMsgBusy) rt.classList.remove('hidden');
   } else {
     document.getElementById('read-time').textContent = '';
+  }
+
+  if (document.getElementById('chk-show-notes').checked) {
+    const noteCount = (view.state.field(notesField, false) || []).length;
+    document.getElementById('note-count').textContent = noteCount + ' note' + (noteCount !== 1 ? 's' : '');
+    document.getElementById('note-count').style.display = '';
+  } else {
+    document.getElementById('note-count').style.display = 'none';
   }
 
   // Milestone check
@@ -2193,24 +2492,30 @@ function checkMilestone(words, prev) {
   }
 }
 
-function typeStatusMessage(text) {
-  if (statusMsgBusy) return;
+function typeStatusMessage(text, force = false) {
+  if (statusMsgBusy) {
+    if (!force) return;
+    clearTimeout(_msgT1); clearTimeout(_msgT2); clearTimeout(_msgT3); clearInterval(_msgIv);
+    statusMsgBusy = false;
+    const _m = document.getElementById('welcome-msg');
+    if (_m) { _m.style.opacity = '0'; _m.textContent = ''; }
+  }
   statusMsgBusy = true;
   if (focusActive) document.body.classList.add('statusbar-peek');
   const msg    = document.getElementById('welcome-msg');
   const readEl = document.getElementById('read-time');
   let i = 0;
   readEl.classList.add('hidden');
-  setTimeout(() => {
+  _msgT1 = setTimeout(() => {
     msg.style.opacity = '1';
     msg.textContent   = '';
-    const t = setInterval(() => {
+    _msgIv = setInterval(() => {
       msg.textContent = text.substring(0, ++i);
       if (i >= text.length) {
-        clearInterval(t);
-        setTimeout(() => {
+        clearInterval(_msgIv);
+        _msgT2 = setTimeout(() => {
           msg.style.opacity = '0';
-          setTimeout(() => {
+          _msgT3 = setTimeout(() => {
             statusMsgBusy = false;
             document.body.classList.remove('statusbar-peek');
             if (document.getElementById('chk-show-readtime').checked && readEl.textContent !== '') {
@@ -2373,7 +2678,7 @@ function setMode(mode) {
     renderPreview();
   }
   const modeLabels = { write: 'editor only.', split: 'split view.', preview: 'preview.' };
-  if (document.getElementById('chk-welcome').checked) typeStatusMessage(modeLabels[mode]);
+  if (!isInitializing && document.getElementById('chk-welcome').checked) typeStatusMessage(modeLabels[mode]);
   saveSettings();
 }
 
@@ -2387,6 +2692,11 @@ document.addEventListener('keydown', e => {
   if (k === 'a')      { e.preventDefault(); setMode('write'); }
   else if (k === 's') { e.preventDefault(); setMode('split'); }
   else if (k === 'd') { e.preventDefault(); setMode('preview'); }
+  else if (k === 'l') { e.preventDefault(); toggleSidebar(); }
+  else if (k === 'e') { e.preventDefault(); toggleNotesSidebar(); }
+  else if (k === 'm') { e.preventDefault(); createNoteFromSelection(); }
+  else if (k === '.') { e.preventDefault(); navigateNote(1); }
+  else if (k === ',') { e.preventDefault(); navigateNote(-1); }
 });
 
 // ── Scroll sync ──────────────────────────────────────────────────────
@@ -2821,6 +3131,7 @@ function saveActiveTabState() {
 }
 
 function switchTab(id) {
+  saveNotes();
   saveActiveTabState();
   activeTabId = id;
   const tab   = getActiveTab();
@@ -2830,6 +3141,13 @@ function switchTab(id) {
   fileHandle = tab.handle || null;
   isDirty    = tab.dirty;
   reachedMilestones = new Set();
+  // Clear and reload notes for the incoming tab (skip for read-only README)
+  if (view) {
+    const existing = view.state.field(notesField, false) || [];
+    if (existing.length) view.dispatch({ effects: existing.map(n => removeNoteEffect.of(n.id)) });
+    if (!tab.isReadme) loadNotes(tab.name);
+    if (notesSidebarOpen) renderNotesSidebar();
+  }
   // Read-only for README tab
   if (view) view.dispatch({ effects: readOnlyCompartment.reconfigure(EditorState.readOnly.of(!!tab.isReadme)) });
   document.body.classList.toggle('readme-active', !!tab.isReadme);
@@ -3083,6 +3401,9 @@ function saveSettings() {
       showLines:    document.getElementById('chk-show-lines').checked,
       showReadtime: document.getElementById('chk-show-readtime').checked,
       showCursor:   document.getElementById('chk-show-cursor').checked,
+      showNotes:    document.getElementById('chk-show-notes').checked,
+      showWp:       document.getElementById('chk-show-wp').checked,
+      statSides,
       spellcheck:    document.getElementById('chk-spellcheck').checked,
       typewriterMode: typewriterMode,
       zenMode:        zenModeActive,
@@ -3134,6 +3455,9 @@ function loadSettings() {
     if (s.showLines === false)    { document.getElementById('chk-show-lines').checked = false; }
     if (s.showReadtime === false) { document.getElementById('chk-show-readtime').checked = false; }
     if (s.showCursor === false)   { document.getElementById('chk-show-cursor').checked = false; }
+    if (s.showNotes === true)     { document.getElementById('chk-show-notes').checked = true; }
+    if (s.showWp    === true)     { document.getElementById('chk-show-wp').checked    = true; }
+    if (s.statSides)              { Object.assign(statSides, s.statSides); }
     if (s.spellcheck === false) {
       document.getElementById('chk-spellcheck').checked = false;
     }
@@ -3160,7 +3484,29 @@ function loadSettings() {
     if (s.mode) setMode(s.mode);
     syncThemeUI();
     applyStatusBarVisibility();
+    applyStatSides();
   } catch(e) {}
+}
+
+const STAT_ITEMS = ['word-count', 'char-count', 'line-count', 'note-count', 'cursor-pos'];
+let statSides = {
+  'word-count': 'left',
+  'char-count': 'left',
+  'line-count': 'left',
+  'note-count': 'left',
+  'cursor-pos': 'right',
+};
+
+function applyStatSides() {
+  const leftEl  = document.querySelector('.stat-left');
+  const rightEl = document.querySelector('.stat-right');
+  STAT_ITEMS.forEach(id => {
+    const el  = document.getElementById(id);
+    const sel = document.querySelector(`.stat-side-select[data-stat="${id}"]`);
+    if (!el) return;
+    (statSides[id] === 'right' ? rightEl : leftEl).appendChild(el);
+    if (sel) sel.value = statSides[id];
+  });
 }
 
 function applyStatusBarVisibility() {
@@ -3168,10 +3514,21 @@ function applyStatusBarVisibility() {
   document.getElementById('line-count').style.display  = document.getElementById('chk-show-lines').checked    ? '' : 'none';
   document.getElementById('read-time').style.display   = document.getElementById('chk-show-readtime').checked ? '' : 'none';
   document.getElementById('cursor-pos').style.display  = document.getElementById('chk-show-cursor').checked   ? '' : 'none';
+  document.getElementById('btn-wp-draft').style.display = document.getElementById('chk-show-wp').checked      ? '' : 'none';
+  if (!document.getElementById('chk-show-notes').checked)
+    document.getElementById('note-count').style.display = 'none';
 }
 
-['chk-show-chars','chk-show-lines','chk-show-readtime','chk-show-cursor'].forEach(id => {
+['chk-show-chars','chk-show-lines','chk-show-readtime','chk-show-cursor','chk-show-notes','chk-show-wp'].forEach(id => {
   document.getElementById(id).addEventListener('change', () => { applyStatusBarVisibility(); saveSettings(); });
+});
+
+document.querySelectorAll('.stat-side-select').forEach(sel => {
+  sel.addEventListener('change', () => {
+    statSides[sel.dataset.stat] = sel.value;
+    applyStatSides();
+    saveSettings();
+  });
 });
 
 document.getElementById('chk-spellcheck').addEventListener('change', function() {
@@ -3428,7 +3785,7 @@ document.addEventListener('keydown', e => {
 
 // ── README tab ────────────────────────────────────────────────────────
 const README_CONTENT = `TREE EDITOR
-Version 1.5.2
+Version 1.6
 
 A distraction-free markdown editor built on CodeMirror 6.
 
@@ -3489,6 +3846,15 @@ KEYBOARD SHORTCUTS
     Ctrl+Shift+A        Write mode (editor only)
     Ctrl+Shift+S        Split mode (editor + preview)
     Ctrl+Shift+D        Preview mode (rendered only)
+
+  Sidebars
+    Ctrl+Shift+L    Toggle library sidebar
+    Ctrl+Shift+E    Toggle notes sidebar
+
+  Notes
+    Ctrl+Shift+M    Add a note to selected text
+    Ctrl+Shift+.    Jump to next note
+    Ctrl+Shift+,    Jump to previous note
 
   Tools
     Ctrl+Shift+H    Toggle autohide toolbar
@@ -3582,9 +3948,21 @@ LIBRARY  (click › to open)
   Recent — The last 10 files you opened or saved.
 
 
+NOTES  (Ctrl+Shift+M)
+
+  Select any text and press Ctrl+Shift+M to attach a note to it.
+  Annotated text gets a subtle underline. Hover to preview the note.
+  Open the notes sidebar (Ctrl+Shift+E or ◂ on the right edge) to see
+  all notes in document order. Click a note to expand and edit it.
+  Click the anchor preview to jump the editor to that text.
+  Navigate between notes with Ctrl+Shift+. and Ctrl+Shift+,.
+  Notes are saved per document and restored on reload.
+
+
 WORDPRESS
 
   Add your site URL and application password in Settings.
+  The ↑ wp button can be enabled in Settings if you use it.
   Click ↑ wp to send the current document to WordPress as a draft.
   Generate an application password at WordPress → Users → Profile.
 
@@ -3633,6 +4011,261 @@ function openReadmeTab() {
 }
 
 // (README link is in About modal)
+
+// ── Notes sidebar ─────────────────────────────────────────────────────
+
+let notesSidebarOpen = false;
+let _pendingNoteSelection = null;
+let _noteDraftTimer = null;
+
+function scheduleNoteDraftSave() {
+  clearTimeout(_noteDraftTimer);
+  _noteDraftTimer = setTimeout(() => {
+    if (!_pendingNoteSelection) return;
+    const ta = document.getElementById('note-input-textarea');
+    try {
+      localStorage.setItem(NOTE_DRAFT_KEY, JSON.stringify({
+        body:    ta.value,
+        snippet: _pendingNoteSelection.snippet,
+      }));
+    } catch(e) {}
+  }, 2000);
+}
+
+function clearNoteDraft() {
+  clearTimeout(_noteDraftTimer);
+  try { localStorage.removeItem(NOTE_DRAFT_KEY); } catch(e) {}
+}
+
+function navigateNote(dir) {
+  if (!view) return;
+  const notes = view.state.field(notesField, false);
+  if (!notes || !notes.length) return;
+  const sorted = [...notes].sort((a, b) => a.from - b.from);
+  const cursor = view.state.selection.main.from;
+  let target;
+  if (dir > 0) {
+    target = sorted.find(n => n.from > cursor) || sorted[0];
+  } else {
+    const before = sorted.filter(n => n.from < cursor);
+    target = before.length ? before[before.length - 1] : sorted[sorted.length - 1];
+  }
+  if (!target) return;
+  view.dispatch({ selection: EditorSelection.cursor(target.from), scrollIntoView: true });
+  view.focus();
+}
+
+function toggleNotesSidebar() {
+  notesSidebarOpen = !notesSidebarOpen;
+  document.body.classList.toggle('notes-open', notesSidebarOpen);
+  document.getElementById('notes-toggle').textContent = notesSidebarOpen ? '▸' : '◂';
+  if (notesSidebarOpen) renderNotesSidebar();
+}
+
+function renderNotesSidebar() {
+  if (!view) return;
+  const notes  = view.state.field(notesField, false) || [];
+  const list   = document.getElementById('notes-list');
+  const empty  = document.getElementById('notes-empty');
+  const sorted = [...notes].sort((a, b) => a.from - b.from);
+  list.innerHTML = '';
+  empty.style.display = sorted.length ? 'none' : '';
+  sorted.forEach(note => {
+    const item = document.createElement('div');
+    item.className = 'note-item';
+    item.dataset.id = note.id;
+
+    const preview = document.createElement('div');
+    preview.className = 'note-anchor-preview';
+    const snip = note.snippet.trim();
+    preview.textContent = !snip ? '(blank)' : snip.length > 40 ? snip.slice(0, 40) + '…' : snip;
+
+    const bodyWrap = document.createElement('div');
+    bodyWrap.className = 'note-body-wrap';
+    bodyWrap.hidden = true;
+
+    const bodyText = document.createElement('div');
+    bodyText.className = 'note-body-text';
+    bodyText.textContent = note.body;
+
+    const actions = document.createElement('div');
+    actions.className = 'note-body-actions';
+
+    const editBtn = document.createElement('button');
+    editBtn.className = 'note-edit-btn';
+    editBtn.textContent = 'edit';
+
+    const del = document.createElement('button');
+    del.className = 'note-delete';
+    del.textContent = '×';
+    del.title = 'Delete note';
+    del.addEventListener('click', e => {
+      e.stopPropagation();
+      view.dispatch({ effects: removeNoteEffect.of(note.id) });
+      saveNotes();
+      renderNotesSidebar();
+    });
+
+    actions.append(editBtn, del);
+    bodyWrap.append(bodyText, actions);
+
+    editBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      bodyText.hidden = true;
+      actions.hidden = true;
+
+      const ta = document.createElement('textarea');
+      ta.className = 'note-body-edit';
+      ta.value = note.body;
+      ta.rows = 3;
+
+      const editActions = document.createElement('div');
+      editActions.className = 'note-body-actions';
+
+      const saveBtn = document.createElement('button');
+      saveBtn.className = 'note-edit-save-btn';
+      saveBtn.textContent = 'save';
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'note-delete';
+      cancelBtn.textContent = 'cancel';
+
+      editActions.append(saveBtn, cancelBtn);
+      bodyWrap.append(ta, editActions);
+      ta.focus();
+      ta.setSelectionRange(ta.value.length, ta.value.length);
+
+      const doSave = () => {
+        const newBody = ta.value.trim();
+        if (!newBody) return;
+        const current = (view.state.field(notesField, false) || []).find(n => n.id === note.id);
+        if (!current) { renderNotesSidebar(); return; }
+        view.dispatch({ effects: [removeNoteEffect.of(current.id), addNoteEffect.of({ ...current, body: newBody })] });
+        saveNotes();
+        renderNotesSidebar();
+      };
+
+      const doCancel = () => {
+        bodyWrap.removeChild(ta);
+        bodyWrap.removeChild(editActions);
+        bodyText.hidden = false;
+        actions.hidden = false;
+      };
+
+      saveBtn.addEventListener('click', e2 => { e2.stopPropagation(); doSave(); });
+      cancelBtn.addEventListener('click', e2 => { e2.stopPropagation(); doCancel(); });
+      ta.addEventListener('keydown', e2 => {
+        e2.stopPropagation();
+        if (e2.key === 'Enter' && (e2.ctrlKey || e2.metaKey)) { e2.preventDefault(); doSave(); }
+        if (e2.key === 'Escape') { e2.preventDefault(); doCancel(); }
+      });
+    });
+
+    item.append(preview, bodyWrap);
+
+    item.addEventListener('click', () => {
+      const wasActive = item.classList.contains('active');
+      list.querySelectorAll('.note-item').forEach(el => {
+        el.classList.remove('active');
+        el.querySelector('.note-body-wrap').hidden = true;
+      });
+      if (!wasActive) {
+        item.classList.add('active');
+        bodyWrap.hidden = false;
+        const pos = Math.min(note.from, view.state.doc.length);
+        view.dispatch({ selection: EditorSelection.cursor(pos), scrollIntoView: true });
+        view.focus();
+      }
+    });
+
+    list.appendChild(item);
+  });
+}
+
+function saveNotes() {
+  if (!view) return;
+  const name  = document.getElementById('filename-input').value || 'untitled.md';
+  const notes = view.state.field(notesField, false) || [];
+  localStorage.setItem(NOTES_KEY_PREFIX + name, JSON.stringify(notes));
+}
+
+function loadNotes(name) {
+  if (!view) return;
+  const raw = localStorage.getItem(NOTES_KEY_PREFIX + name);
+  if (!raw) return;
+  let notes;
+  try { notes = JSON.parse(raw); } catch { return; }
+  const docText = view.state.doc.toString();
+  const len = docText.length;
+  const resolved = notes.map(n => {
+    const idx = n.snippet ? docText.indexOf(n.snippet) : -1;
+    if (idx !== -1) return { ...n, from: idx, to: idx + n.snippet.length };
+    return { ...n, from: Math.min(n.from, len), to: Math.min(n.to, len) };
+  }).filter(n => n.from < n.to);
+  if (!resolved.length) return;
+  view.dispatch({ effects: resolved.map(n => addNoteEffect.of(n)) });
+}
+
+function createNoteFromSelection() {
+  if (!view) return;
+  const sel = view.state.selection.main;
+  if (sel.from === sel.to) return;
+  const snippet = view.state.sliceDoc(sel.from, Math.min(sel.to, sel.from + 60));
+  _pendingNoteSelection = { from: sel.from, to: sel.to, snippet };
+  const label = document.querySelector('#note-input-box label');
+  if (label) label.textContent = 'add note';
+  const overlay = document.getElementById('note-input-overlay');
+  const ta      = document.getElementById('note-input-textarea');
+  ta.value = '';
+  try {
+    const draft = JSON.parse(localStorage.getItem(NOTE_DRAFT_KEY) || 'null');
+    if (draft && draft.snippet === snippet && draft.body)
+      ta.value = draft.body;
+  } catch(e) {}
+  overlay.style.display = 'flex';
+  ta.focus();
+}
+
+function confirmNoteInput() {
+  const ta   = document.getElementById('note-input-textarea');
+  const body = ta.value.trim();
+  if (!body || !_pendingNoteSelection) { cancelNoteInput(); return; }
+  const note = {
+    id:        Date.now() + '-' + Math.random().toString(36).slice(2),
+    from:      _pendingNoteSelection.from,
+    to:        _pendingNoteSelection.to,
+    snippet:   _pendingNoteSelection.snippet,
+    body,
+    createdAt: new Date().toISOString(),
+  };
+  view.dispatch({ effects: addNoteEffect.of(note) });
+  saveNotes();
+  if (notesSidebarOpen) renderNotesSidebar();
+  clearNoteDraft();
+  cancelNoteInput();
+}
+
+function cancelNoteInput() {
+  clearNoteDraft();
+  _pendingNoteSelection = null;
+  document.getElementById('note-input-overlay').style.display = 'none';
+  document.getElementById('note-input-textarea').value = '';
+  if (view) view.focus();
+}
+
+document.getElementById('notes-toggle').addEventListener('click', toggleNotesSidebar);
+document.getElementById('note-confirm-btn').addEventListener('click', confirmNoteInput);
+document.getElementById('note-cancel-btn').addEventListener('click', cancelNoteInput);
+
+document.getElementById('note-input-textarea').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); confirmNoteInput(); }
+  if (e.key === 'Escape') { e.preventDefault(); cancelNoteInput(); }
+});
+document.getElementById('note-input-textarea').addEventListener('input', scheduleNoteDraftSave);
+
+document.getElementById('note-input-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('note-input-overlay')) cancelNoteInput();
+});
 
 // ── Library ────────────────────────────────────────────────────────────
 
@@ -4157,6 +4790,7 @@ function init() {
 
   // Load settings first (sets theme, font, size before editor mounts)
   loadSettings();
+  isInitializing = false;
   loadWpSettings();
 
   // Restore autosaved content
@@ -4185,6 +4819,10 @@ function init() {
   // Mount CM6
   initEditor(initialContent);
 
+  // Load notes for initial tab
+  const initialTabName = document.getElementById('filename-input').value || 'untitled.md';
+  loadNotes(initialTabName);
+
   // Init tab state
   const tab = getActiveTab();
   if (tab) { tab.content = initialContent; tab.name = document.getElementById('filename-input').value; }
@@ -4199,10 +4837,7 @@ function init() {
 
   // Welcome message
   if (document.getElementById('chk-welcome').checked) {
-    setTimeout(() => {
-      const msg = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
-      typeStatusMessage(msg);
-    }, 800);
+    setTimeout(() => typeStatusMessage('welcome to tree.'), 800);
   }
 
   // Restore Just Write state (survives page reload)
@@ -4242,8 +4877,28 @@ function init() {
   initLibrary();
 }
 
+// Intercept URL-over-selection pastes in the capture phase, before CM6's
+// beforeinput handler fires. Calling event.preventDefault() here tells the
+// browser to cancel the insertFromPaste pipeline entirely, so CM6 never
+// inserts the raw URL as plain text. Our dispatch handles the insert instead.
+document.addEventListener('paste', (event) => {
+  if (!view || !view.contentDOM.contains(event.target)) return;
+  const text = event.clipboardData?.getData('text/plain') || '';
+  if (!/^https?:\/\//i.test(text)) return;
+  const { from, to } = view.state.selection.main;
+  if (from === to) return;
+  const selected = view.state.sliceDoc(from, to);
+  event.preventDefault();
+  view.dispatch({
+    changes: { from, to, insert: `[${selected}](${text})` },
+    selection: EditorSelection.cursor(from + selected.length + text.length + 4),
+    userEvent: 'input',
+  });
+  if (document.getElementById('chk-welcome').checked) typeStatusMessage('linked.', true);
+}, { capture: true });
+
 // Flush autosave synchronously when the window closes, regardless of debounce timer
-window.addEventListener('beforeunload', () => { autosave(); });
+window.addEventListener('beforeunload', () => { autosave(); saveNotes(); });
 
 init();
 </script>
