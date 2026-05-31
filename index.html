@@ -1661,6 +1661,7 @@ let focusHintTimer  = null;
 let view              = null; // CM6 EditorView
 let justWriteActive   = false;
 let goalTarget        = 0;   // 0 = no goal
+let goalBaseline      = 0;   // word count when goal was set
 let goalReached       = false;
 let justWriteWordStart = 0;
 let justWriteTabId    = null;
@@ -2182,8 +2183,8 @@ function buildExtensions() {
         return insertTwoSpaces(view);
       }},
       { key: 'Ctrl-s',        run: () => { saveFile(); return true; } },
-      { key: 'Ctrl-h',        run: () => { openSearchPanel(view); return true; } },
-      { key: 'Mod-Shift-f',  run: () => { openSearchPanel(view); return true; } },
+      { key: 'Ctrl-h',        run: () => { document.querySelector('.cm-panels-top') ? closeSearchPanel(view) : openSearchPanel(view); return true; } },
+      { key: 'Mod-Shift-f',  run: () => { document.querySelector('.cm-panels-top') ? closeSearchPanel(view) : openSearchPanel(view); return true; } },
       { key: 'Ctrl-b',        run: () => { wrapSelection('**', '**'); return true; } },
       { key: 'Ctrl-i',        run: () => { wrapSelection('*', '*'); return true; } },
       { key: 'Ctrl-k',        run: () => { wrapSelection('[', '](url)'); return true; } },
@@ -2530,8 +2531,9 @@ const goalMessages = [
 ];
 
 function setGoal(n) {
-  goalTarget  = Math.max(0, Math.floor(n) || 0);
-  goalReached = false;
+  goalTarget   = Math.max(0, Math.floor(n) || 0);
+  goalBaseline = goalTarget > 0 ? lastWordCount : 0;
+  goalReached  = false;
   document.getElementById('inp-goal').value = goalTarget || '';
   try { localStorage.setItem(GOAL_KEY, goalTarget); } catch(e) {}
   updateGoalBar(lastWordCount, -1);
@@ -2546,14 +2548,15 @@ function updateGoalBar(words, prev) {
     wc.textContent = words + ' word' + (words !== 1 ? 's' : '');
     return;
   }
-  const pct = Math.min(100, (words / goalTarget) * 100);
+  const sessionWords = Math.max(0, words - goalBaseline);
+  const pct = Math.min(100, (sessionWords / goalTarget) * 100);
   bar.style.width = pct + '%';
   bar.classList.add('active');
   const fmtGoal = goalTarget >= 1000 ? (goalTarget / 1000).toFixed(goalTarget % 1000 ? 1 : 0) + 'k' : goalTarget;
-  wc.textContent = words + ' / ' + fmtGoal + ' words';
-  if (words < goalTarget) {
+  wc.textContent = sessionWords + ' / ' + fmtGoal + ' words · ' + words + ' total';
+  if (sessionWords < goalTarget) {
     goalReached = false;
-  } else if (!goalReached && prev < goalTarget) {
+  } else if (!goalReached && Math.max(0, prev - goalBaseline) < goalTarget) {
     goalReached = true;
     if (document.getElementById('chk-welcome').checked) {
       const msg = goalMessages[Math.floor(Math.random() * goalMessages.length)];
@@ -2874,6 +2877,8 @@ document.getElementById('btn-sync-scroll').addEventListener('click', () => {
 
 // Scroll sync: editor scrolls → preview mirrors (smooth interpolation, rAF-throttled)
 document.getElementById('editor-scroll').addEventListener('scroll', () => {
+  const panel = document.querySelector('.cm-panels-top');
+  if (panel) panel.style.transform = `translateY(${document.getElementById('editor-scroll').scrollTop}px)`;
   if (!scrollSynced || currentMode !== 'split' || !view) return;
   if (Date.now() - editorSyncedAt < SYNC_GUARD) return; // this scroll was caused by us, skip
   if (syncScrollRaf) return;
@@ -3647,6 +3652,7 @@ function saveSettings() {
       previewFont:   document.getElementById('preview-font-select').value,
       mode:          currentMode,
       goalTarget:    goalTarget,
+      goalBaseline:  goalBaseline,
     }));
   } catch(e) {}
 }
@@ -3717,7 +3723,8 @@ function loadSettings() {
     }
     if (s.mode) setMode(s.mode);
     if (s.goalTarget) {
-      goalTarget = s.goalTarget;
+      goalTarget   = s.goalTarget;
+      goalBaseline = s.goalBaseline || 0;
       document.getElementById('inp-goal').value = goalTarget;
     }
     syncThemeUI();
@@ -3990,7 +3997,7 @@ document.addEventListener('keydown', e => {
 
 // ── README tab ────────────────────────────────────────────────────────
 const README_CONTENT = `TREE EDITOR
-Version 1.6
+Version 1.6.1
 
 A distraction-free markdown editor built on CodeMirror 6.
 
@@ -4044,8 +4051,8 @@ KEYBOARD SHORTCUTS
     Ctrl+Shift+O    Open a file
 
   Search
-    Ctrl+H              Find & replace (matches highlight as you type)
-    Cmd+Shift+F         Find & replace (iPad / Mac alias)
+    Ctrl+H              Find & replace — toggle open/close
+    Cmd+Shift+F         Find & replace — toggle open/close (iPad / Mac alias)
 
   View                  (works from any mode, including preview)
     Ctrl+Shift+A        Write mode (editor only)
@@ -4140,11 +4147,14 @@ FOOTNOTES
 
 WORD COUNT GOAL  (Ctrl+Shift+W)
 
-  Set a target word count for the session. The status bar switches
-  to "X / goal words" format and a hairline progress bar fills
-  along the bottom of the status bar as you write. A message fires
-  when you hit the target. The goal resets if you drop below and
-  write back up, so it can fire again.
+  Set a target for how many words to add this session. The baseline
+  is captured at the moment you set the goal, so existing words in
+  the document don't count against it. The status bar shows
+  "X / goal words · N total" — words added since the goal was set,
+  your target, and the full document total. A hairline progress bar
+  fills along the bottom of the status bar as you write. A message
+  fires when you hit the target. The goal resets if you drop below
+  and write back up, so it can fire again.
 
   Set goal via Ctrl+Shift+W or the word count goal field in
   Settings. Set to 0 to clear.
@@ -4795,6 +4805,12 @@ function init() {
 
   // Mount CM6
   initEditor(initialContent);
+
+  // Keep search panel pinned to top of visible editor area when scrolled
+  new MutationObserver(() => {
+    const panel = document.querySelector('.cm-panels-top');
+    if (panel) panel.style.transform = `translateY(${document.getElementById('editor-scroll').scrollTop}px)`;
+  }).observe(document.getElementById('editor-cm'), { childList: true, subtree: true });
 
   // Init tab state
   const tab = getActiveTab();
