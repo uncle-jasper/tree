@@ -2149,6 +2149,20 @@ function buildExtensions() {
         const { state } = view;
         const { from, to } = state.selection.main;
         if (from === to) {
+          // Jump past closing } if cursor is anywhere inside an annotation
+          const text = state.doc.toString();
+          ANNOTATION_RE.lastIndex = 0;
+          let m;
+          while ((m = ANNOTATION_RE.exec(text)) !== null) {
+            const aFrom = m.index;
+            const aTo   = aFrom + m[0].length;
+            if (from > aFrom && from < aTo) {
+              view.dispatch({ selection: EditorSelection.cursor(aTo), userEvent: 'select' });
+              return true;
+            }
+          }
+
+          // Jump past closing marks
           const a3 = state.sliceDoc(from, Math.min(state.doc.length, from + 3));
           const a2 = state.sliceDoc(from, Math.min(state.doc.length, from + 2));
           const a1 = state.sliceDoc(from, Math.min(state.doc.length, from + 1));
@@ -2678,19 +2692,25 @@ function parseInline(s) {
 }
 
 function parseMarkdown(md) {
-  // Collect and remove footnote definitions; strip annotations
   const footnoteMap = new Map();
   const footnoteOrder = [];
-  const bodyLines = stripAnnotations(md).split('\n').filter(line => {
-    const fm = line.match(/^\[\^([^\]]+)\]:\s*(.+)$/);
-    if (fm) {
-      if (!footnoteMap.has(fm[1])) { footnoteMap.set(fm[1], fm[2]); footnoteOrder.push(fm[1]); }
-      return false;
-    }
-    return true;
-  });
 
-  const lines = bodyLines;
+  const stripped = stripAnnotations(md);
+
+  // Extract footnote definitions using multiline mode so ^ matches each line start
+  const defRe = /^\[\^([^\]]+)\]:\s*(.*)/gm;
+  let defM;
+  while ((defM = defRe.exec(stripped)) !== null) {
+    const label   = defM[1];
+    const content = defM[2].trim();
+    if (!footnoteMap.has(label)) {
+      footnoteMap.set(label, content);
+      footnoteOrder.push(label);
+    }
+  }
+
+  // Remove all definition lines from the body, then split into lines
+  const lines = stripped.replace(/^\[\^[^\]]+\]:\s*.*/gm, '').split('\n');
   let html = '';
   let i = 0;
 
@@ -2772,6 +2792,7 @@ function parseMarkdown(md) {
       if (l.startsWith('> ')) break;
       if (/^[-*] /.test(l) || /^\d+\. /.test(l)) break;
       if (/^---+$/.test(l)) break;
+      if (/^\[\^[^\]]+\]:/.test(l)) break;
       paraLines.push(l);
       i++;
     }
@@ -2783,7 +2804,7 @@ function parseMarkdown(md) {
   }
 
   if (footnoteOrder.length > 0) {
-    html += '<hr>\n<section class="footnotes"><ol>';
+    html += '<section class="footnotes"><ol>';
     for (const label of footnoteOrder) {
       html += `<li id="fn-${escapeHtml(label)}">${parseInline(footnoteMap.get(label))} <a href="#fnref-${escapeHtml(label)}" class="footnote-backref">↩</a></li>`;
     }
