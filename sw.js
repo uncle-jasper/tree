@@ -1,9 +1,9 @@
-const CACHE = 'tree-v34';
+const CACHE = 'tree-v35';
 const ASSETS = ['/tree/', '/tree/index.html', '/tree/manifest.json', '/tree/icon.svg'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(ASSETS).catch(() => {}))
+    caches.open(CACHE).then(c => c.addAll(ASSETS))
   );
   self.skipWaiting();
 });
@@ -28,7 +28,7 @@ self.addEventListener('fetch', e => {
           caches.open(CACHE).then(c => c.put(e.request, clone));
         }
         return res;
-      });
+      }).catch(() => caches.match('/tree/index.html'));
     })
   );
 });
