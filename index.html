@@ -3141,7 +3141,8 @@ function setupAutohideZone() {
 
     // Focus mode: reveal header on hover near top, independent of autohide
     if (focusActive) {
-      if (!isSearchPanelOpen() && y <= headerH + 20) {
+      const quickSettingsOpen = document.getElementById('quick-settings').classList.contains('open');
+      if (!isSearchPanelOpen() && (y <= headerH + 20 || quickSettingsOpen)) {
         document.body.classList.add('toolbar-peek');
       } else {
         document.body.classList.remove('toolbar-peek');
