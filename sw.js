@@ -1,4 +1,4 @@
-const CACHE = 'tree-v36';
+const CACHE = 'tree-v37';
 const ASSETS = ['/tree/', '/tree/index.html', '/tree/manifest.json', '/tree/icon.svg'];
 
 self.addEventListener('install', e => {
@@ -19,6 +19,26 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+
+  // Network-first for HTML so deploys are visible immediately
+  const isHTML = e.request.destination === 'document' ||
+    e.request.url.endsWith('/tree/') ||
+    e.request.url.endsWith('/tree/index.html');
+
+  if (isHTML) {
+    e.respondWith(
+      fetch(e.request).then(res => {
+        if (res.ok) {
+          const clone = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+        }
+        return res;
+      }).catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  // Cache-first for all other assets
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;

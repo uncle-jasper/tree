@@ -2545,7 +2545,8 @@ function updateGoalBar(words, prev) {
   if (!goalTarget) {
     bar.style.width = '0%';
     bar.classList.remove('active');
-    wc.textContent = words + ' word' + (words !== 1 ? 's' : '');
+    const hasSel = view && !view.state.selection.main.empty;
+    if (!hasSel) wc.textContent = words + ' word' + (words !== 1 ? 's' : '');
     return;
   }
   const sessionWords = Math.max(0, words - goalBaseline);
