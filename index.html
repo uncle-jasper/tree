@@ -528,13 +528,11 @@
   * { scrollbar-width: none; -ms-overflow-style: none; }
 
   /* ── Themes ── */
-  body[data-theme="dark"]     { --bg:#0a0a0a; --surface:#141414; --text:#d8d8d8; --accent:#444444; --muted:#555555; --border:#222222; }
+  body[data-theme="dark"]     { --bg:#1a1a1a; --surface:#252525; --text:#d8d8d8; --accent:#444444; --muted:#555555; --border:#2a2a2a; }
   body[data-theme="moss"]     { --bg:#1e2420; --surface:#242d28; --text:#d4ddd0; --accent:#82b890; --muted:#607860; --border:#2e3d30; }
   body[data-theme="slate"]    { --bg:#1c2333; --surface:#232d40; --text:#d0d8e8; --accent:#7a9fd4; --muted:#5a7090; --border:#2e3d54; }
-  body[data-theme="dusk"]     { --bg:#1e1714; --surface:#261d1a; --text:#e8ddd4; --accent:#b87355; --muted:#7a5c4e; --border:#332520; }
   body[data-theme="paper"]    { --bg:#f5f7fa; --surface:#eceef2; --text:#1a1d23; --accent:#4a6080; --muted:#8a96a8; --border:#d4d8e0; }
   body[data-theme="sage"]     { --bg:#c4d9c4; --surface:#b8cfb8; --text:#162016; --accent:#3a6640; --muted:#4a6050; --border:#a0bfa0; }
-  body[data-theme="sepia"]    { --bg:#c8a97e; --surface:#bc9e74; --text:#1e140a; --accent:#6b3f1a; --muted:#7a5535; --border:#a88860; }
   body[data-theme="ash"]      { --bg:#b0b0b0; --surface:#a4a4a4; --text:#0e0e0e; --accent:#3a3a3a; --muted:#555555; --border:#909090; }
   body[data-theme="terminal"] { --bg:#0a0a0a; --surface:#0f0f0f; --text:#22cc22; --accent:#0a5c0a; --muted:#1a7a1a; --border:#1a3a1a; }
   body[data-theme="terminal"] .cm-content,
@@ -1258,31 +1256,29 @@
   <div class="tool-group" style="position:relative">
     <select id="theme-select" style="display:none" aria-hidden="true">
       <option value="parchment" selected>parchment</option>
-      <option value="sepia">sepia</option>
       <option value="paper">paper</option>
       <option value="ash">ash</option>
       <option value="sage">sage</option>
       <option value="dark">dark</option>
       <option value="moss">moss</option>
       <option value="slate">slate</option>
-      <option value="dusk">dusk</option>
       <option value="terminal">terminal</option>
       <option value="custom">custom…</option>
+      <option value="custom2">custom 2…</option>
     </select>
     <span id="theme-label" title="style">style</span>
     <div id="quick-settings">
       <div class="settings-theme-list">
         <div class="settings-theme-item" data-value="parchment"><span class="theme-swatch" style="background:#f5f0e8"></span>parchment</div>
-        <div class="settings-theme-item" data-value="sepia"><span class="theme-swatch" style="background:#c8a97e"></span>sepia</div>
         <div class="settings-theme-item" data-value="paper"><span class="theme-swatch" style="background:#f5f7fa"></span>paper</div>
         <div class="settings-theme-item" data-value="ash"><span class="theme-swatch" style="background:#b0b0b0"></span>ash</div>
         <div class="settings-theme-item" data-value="sage"><span class="theme-swatch" style="background:#c4d9c4"></span>sage</div>
-        <div class="settings-theme-item" data-value="dark"><span class="theme-swatch" style="background:#0a0a0a"></span>dark</div>
+        <div class="settings-theme-item" data-value="dark"><span class="theme-swatch" style="background:#1a1a1a"></span>dark</div>
         <div class="settings-theme-item" data-value="moss"><span class="theme-swatch" style="background:#1e2420"></span>moss</div>
         <div class="settings-theme-item" data-value="slate"><span class="theme-swatch" style="background:#1c2333"></span>slate</div>
-        <div class="settings-theme-item" data-value="dusk"><span class="theme-swatch" style="background:#1e1714"></span>dusk</div>
         <div class="settings-theme-item" data-value="terminal"><span class="theme-swatch" style="background:#0a0a0a;outline:1px solid #1a3a1a"></span>terminal</div>
         <div class="settings-theme-item" data-value="custom"><span class="theme-swatch theme-swatch-custom"></span>custom…</div>
+        <div class="settings-theme-item" data-value="custom2"><span class="theme-swatch theme-swatch-custom"></span>custom 2…</div>
       </div>
       <div id="settings-crt-row" class="settings-row">
         <input type="checkbox" id="chk-crt">
@@ -1303,6 +1299,23 @@
           <span>accent</span>
           <input type="color" id="color-accent" value="#8b6e4e">
           <input type="text" id="hex-accent" value="#8b6e4e" class="hex-input" maxlength="7" spellcheck="false">
+        </div>
+      </div>
+      <div id="custom-colors-2" style="display:none; margin-top:10px;">
+        <div class="color-pair" style="margin-bottom:6px;">
+          <span>bg</span>
+          <input type="color" id="color-bg-2" value="#f5f0e8">
+          <input type="text" id="hex-bg-2" value="#f5f0e8" class="hex-input" maxlength="7" spellcheck="false">
+        </div>
+        <div class="color-pair" style="margin-bottom:6px;">
+          <span>text</span>
+          <input type="color" id="color-text-2" value="#2c2416">
+          <input type="text" id="hex-text-2" value="#2c2416" class="hex-input" maxlength="7" spellcheck="false">
+        </div>
+        <div class="color-pair">
+          <span>accent</span>
+          <input type="color" id="color-accent-2" value="#8b6e4e">
+          <input type="text" id="hex-accent-2" value="#8b6e4e" class="hex-input" maxlength="7" spellcheck="false">
         </div>
       </div>
       <hr class="settings-divider" style="margin-top:12px;">
@@ -1567,7 +1580,7 @@
     <p class="about-sub">A Markdown Editor</p>
     <p class="about-credit">Vibe coded by Dan</p>
     <p class="about-copy">© 2026</p>
-    <p class="about-version"><span style="font-size:13px;">v1.6.1</span><span style="font-size:11px; opacity:0.35; margin: 0 5px;">·</span><a href="#" style="font-size:11px; color:var(--accent); opacity:0.5; text-decoration:none;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='0.5'" onclick="document.getElementById('about-overlay').style.display='none'; openReadmeTab(); return false;">readme</a></p>
+    <p class="about-version"><span style="font-size:13px;">v1.6.2</span><span style="font-size:11px; opacity:0.35; margin: 0 5px;">·</span><a href="#" style="font-size:11px; color:var(--accent); opacity:0.5; text-decoration:none;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='0.5'" onclick="document.getElementById('about-overlay').style.display='none'; openReadmeTab(); return false;">readme</a></p>
     <p style="margin-top:4px; font-size:11px;"><a href="https://buymeacoffee.com/dandanmian" target="_blank" style="color:var(--accent); opacity:0.7; text-decoration:none;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">☕ buy me a coffee</a></p>
   </div>
 </div>
@@ -3004,10 +3017,12 @@ function adjustHex(h,a) { const [r,g,b]=hexToRgb(h); return rgbToHex(r+a,g+a,b+a
 function blendHex(f,b,t) { const[r1,g1,b1]=hexToRgb(f);const[r2,g2,b2]=hexToRgb(b);return rgbToHex(r1*t+r2*(1-t),g1*t+g2*(1-t),b1*t+b2*(1-t)); }
 
 function applyCustomColors() {
-  if (document.getElementById('theme-select').value !== 'custom') return;
-  const bg     = document.getElementById('color-bg').value;
-  const text   = document.getElementById('color-text').value;
-  const accent = document.getElementById('color-accent').value;
+  const val = document.getElementById('theme-select').value;
+  if (val !== 'custom' && val !== 'custom2') return;
+  const sfx    = val === 'custom2' ? '-2' : '';
+  const bg     = document.getElementById('color-bg'     + sfx).value;
+  const text   = document.getElementById('color-text'   + sfx).value;
+  const accent = document.getElementById('color-accent' + sfx).value;
   document.documentElement.style.setProperty('--bg',     bg);
   document.documentElement.style.setProperty('--surface',adjustHex(bg,-10));
   document.documentElement.style.setProperty('--text',   text);
@@ -3031,8 +3046,9 @@ function syncThemeUI() {
   // CRT row: only show for terminal theme
   const crtRow = document.getElementById('settings-crt-row');
   crtRow.style.display = (val === 'terminal') ? 'flex' : 'none';
-  // Custom colors panel
-  document.getElementById('custom-colors').style.display = (val === 'custom') ? 'block' : 'none';
+  // Custom colors panels
+  document.getElementById('custom-colors').style.display   = (val === 'custom')  ? 'block' : 'none';
+  document.getElementById('custom-colors-2').style.display = (val === 'custom2') ? 'block' : 'none';
   // Amber CRT: only valid in terminal
   if (val !== 'terminal') document.body.classList.remove('amber-crt');
 }
@@ -3041,8 +3057,8 @@ function setTheme(val) {
   if (justWriteActive) return;
   const select = document.getElementById('theme-select');
   select.value = val;
-  document.body.dataset.theme = (val === 'custom') ? '' : (val || 'parchment');
-  if (val === 'custom') applyCustomColors();
+  document.body.dataset.theme = (val === 'custom' || val === 'custom2') ? '' : (val || 'parchment');
+  if (val === 'custom' || val === 'custom2') applyCustomColors();
   else clearCustomColors();
   if (val !== 'terminal') document.body.classList.remove('amber-crt');
   syncThemeUI();
@@ -3083,6 +3099,15 @@ document.getElementById('chk-crt').addEventListener('change', function() {
 ['bg','text','accent'].forEach(key => {
   const picker = document.getElementById('color-' + key);
   const hex    = document.getElementById('hex-' + key);
+  picker.addEventListener('input', () => { hex.value = picker.value; applyCustomColors(); saveSettings(); });
+  hex.addEventListener('input', () => {
+    if (/^#[0-9a-fA-F]{6}$/.test(hex.value)) { picker.value = hex.value; applyCustomColors(); saveSettings(); }
+  });
+});
+
+['bg','text','accent'].forEach(key => {
+  const picker = document.getElementById('color-' + key + '-2');
+  const hex    = document.getElementById('hex-' + key + '-2');
   picker.addEventListener('input', () => { hex.value = picker.value; applyCustomColors(); saveSettings(); });
   hex.addEventListener('input', () => {
     if (/^#[0-9a-fA-F]{6}$/.test(hex.value)) { picker.value = hex.value; applyCustomColors(); saveSettings(); }
@@ -3640,9 +3665,12 @@ function saveSettings() {
       showWelcome:  document.getElementById('chk-welcome').checked,
       crtEnabled:   document.body.classList.contains('crt-on'),
       scrollSynced: scrollSynced,
-      customBg:     document.getElementById('color-bg').value,
-      customText:   document.getElementById('color-text').value,
-      customAccent: document.getElementById('color-accent').value,
+      customBg:      document.getElementById('color-bg').value,
+      customText:    document.getElementById('color-text').value,
+      customAccent:  document.getElementById('color-accent').value,
+      custom2Bg:     document.getElementById('color-bg-2').value,
+      custom2Text:   document.getElementById('color-text-2').value,
+      custom2Accent: document.getElementById('color-accent-2').value,
       showChars:    document.getElementById('chk-show-chars').checked,
       showLines:    document.getElementById('chk-show-lines').checked,
       showReadtime: document.getElementById('chk-show-readtime').checked,
@@ -3666,11 +3694,14 @@ function loadSettings() {
     const s = JSON.parse(raw);
     if (s.theme !== undefined) {
       document.getElementById('theme-select').value = s.theme;
-      document.body.dataset.theme = (s.theme === 'custom') ? '' : (s.theme || 'parchment');
-      if (s.customBg)     { document.getElementById('color-bg').value    = s.customBg;     document.getElementById('hex-bg').value    = s.customBg; }
-      if (s.customText)   { document.getElementById('color-text').value  = s.customText;   document.getElementById('hex-text').value  = s.customText; }
-      if (s.customAccent) { document.getElementById('color-accent').value= s.customAccent; document.getElementById('hex-accent').value= s.customAccent; }
-      if (s.theme === 'custom') applyCustomColors();
+      document.body.dataset.theme = (s.theme === 'custom' || s.theme === 'custom2') ? '' : (s.theme || 'parchment');
+      if (s.customBg)      { document.getElementById('color-bg').value      = s.customBg;      document.getElementById('hex-bg').value      = s.customBg; }
+      if (s.customText)    { document.getElementById('color-text').value    = s.customText;    document.getElementById('hex-text').value    = s.customText; }
+      if (s.customAccent)  { document.getElementById('color-accent').value  = s.customAccent;  document.getElementById('hex-accent').value  = s.customAccent; }
+      if (s.custom2Bg)     { document.getElementById('color-bg-2').value    = s.custom2Bg;     document.getElementById('hex-bg-2').value    = s.custom2Bg; }
+      if (s.custom2Text)   { document.getElementById('color-text-2').value  = s.custom2Text;   document.getElementById('hex-text-2').value  = s.custom2Text; }
+      if (s.custom2Accent) { document.getElementById('color-accent-2').value= s.custom2Accent; document.getElementById('hex-accent-2').value= s.custom2Accent; }
+      if (s.theme === 'custom' || s.theme === 'custom2') applyCustomColors();
     }
     if (s.font) {
       document.getElementById('settings-font-select').value = s.font;
@@ -3935,7 +3966,7 @@ function activateJustWrite() {
 
   document.body.classList.add('just-write');
   document.getElementById('theme-select').disabled = true;
-  ['color-bg','color-text','color-accent','hex-bg','hex-text','hex-accent'].forEach(id => {
+  ['color-bg','color-text','color-accent','hex-bg','hex-text','hex-accent','color-bg-2','color-text-2','color-accent-2','hex-bg-2','hex-text-2','hex-accent-2'].forEach(id => {
     const el = document.getElementById(id); if (el) el.disabled = true;
   });
 
@@ -3965,7 +3996,7 @@ function deactivateJustWrite(msg) {
 
   document.body.classList.remove('just-write');
   document.getElementById('theme-select').disabled = false;
-  ['color-bg','color-text','color-accent','hex-bg','hex-text','hex-accent'].forEach(id => {
+  ['color-bg','color-text','color-accent','hex-bg','hex-text','hex-accent','color-bg-2','color-text-2','color-accent-2','hex-bg-2','hex-text-2','hex-accent-2'].forEach(id => {
     const el = document.getElementById(id); if (el) el.disabled = false;
   });
 
@@ -3999,7 +4030,7 @@ document.addEventListener('keydown', e => {
 
 // ── README tab ────────────────────────────────────────────────────────
 const README_CONTENT = `TREE EDITOR
-Version 1.6.1
+Version 1.6.2
 
 A distraction-free markdown editor built on CodeMirror 6.
 
@@ -4845,7 +4876,7 @@ function init() {
         justWriteTabId     = activeTabId;
         document.body.classList.add('just-write');
         document.getElementById('theme-select').disabled = true;
-        ['color-bg','color-text','color-accent','hex-bg','hex-text','hex-accent'].forEach(id => {
+        ['color-bg','color-text','color-accent','hex-bg','hex-text','hex-accent','color-bg-2','color-text-2','color-accent-2','hex-bg-2','hex-text-2','hex-accent-2'].forEach(id => {
           const el = document.getElementById(id); if (el) el.disabled = true;
         });
         renderTabs();
