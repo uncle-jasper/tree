@@ -1009,7 +1009,7 @@
     box-shadow: 0 8px 32px rgba(0,0,0,0.35);
   }
   #goal-prompt-modal p { margin: 0 0 14px; opacity: 0.7; font-size: 11px; }
-  #goal-prompt-modal input[type="number"] {
+  #goal-prompt-modal input[type="text"] {
     width: 100%;
     background: var(--bg);
     border: 1px solid var(--border);
@@ -1022,6 +1022,7 @@
     box-sizing: border-box;
     margin-bottom: 12px;
   }
+  #goal-prompt-modal input.invalid { border-color: var(--accent); }
   #goal-prompt-hint { font-size: 10px; opacity: 0.4; margin: 0; }
 
   /* ── Footnotes in preview ── */
@@ -1550,12 +1551,12 @@
 <!-- Annotation hover popup -->
 <div id="annotation-popup"></div>
 
-<!-- Word count goal prompt -->
+<!-- Word or time goal prompt -->
 <div id="goal-prompt-overlay" style="display:none">
   <div id="goal-prompt-modal">
-    <p>set a word count goal for this session</p>
-    <input type="number" id="goal-prompt-input" min="0" max="99999" placeholder="e.g. 500">
-    <p id="goal-prompt-hint">enter 0 to clear · press Enter to confirm · Esc to cancel</p>
+    <p>set a goal for this session: words, or time</p>
+    <input type="text" id="goal-prompt-input" placeholder="e.g. 500 or 25m" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <p id="goal-prompt-hint">500 words or 25m · 0 to clear · Enter to confirm · Esc to cancel</p>
   </div>
 </div>
 
@@ -1584,6 +1585,10 @@
       <div class="settings-row">
         <label for="inp-goal" style="flex:1">word count goal</label>
         <input type="number" id="inp-goal" min="0" max="99999" placeholder="0 = off" style="width:72px; background:var(--bg); border:1px solid var(--border); border-radius:4px; color:var(--text); font-family:'JetBrains Mono',monospace; font-size:11px; padding:2px 6px; outline:none;">
+      </div>
+      <div class="settings-row">
+        <label for="inp-time-goal" style="flex:1">time goal (min)</label>
+        <input type="number" id="inp-time-goal" min="0" max="5999" placeholder="0 = off" style="width:72px; background:var(--bg); border:1px solid var(--border); border-radius:4px; color:var(--text); font-family:'JetBrains Mono',monospace; font-size:11px; padding:2px 6px; outline:none;">
       </div>
     </div>
     <hr class="settings-divider">
@@ -1698,7 +1703,7 @@
         <div class="keys-row"><kbd>Ctrl+Shift+T</kbd><span>typewriter</span></div>
         <div class="keys-row"><kbd>Ctrl+Shift+G</kbd><span>zen mode</span></div>
         <div class="keys-row"><kbd>Ctrl+Shift+J</kbd><span>just write</span></div>
-        <div class="keys-row"><kbd>Ctrl+Shift+W</kbd><span>word count goal</span></div>
+        <div class="keys-row"><kbd>Ctrl+Shift+W</kbd><span>word or time goal</span></div>
         <div class="keys-row"><kbd>Ctrl+Shift+N</kbd><span>insert note</span></div>
         <div class="keys-row"><kbd>Ctrl+Shift+L</kbd><span>lock</span></div>
       </div>
@@ -1839,6 +1844,10 @@ let justWriteActive   = false;
 let goalTarget        = 0;   // 0 = no goal
 let goalBaseline      = 0;   // word count when goal was set
 let goalReached       = false;
+let timeGoalMin       = 0;     // 0 = no time goal
+let timeGoalSpent     = 0;     // ms counted so far
+let timeGoalTabId     = null;  // the tab it belongs to (null = the active tab, after a reload)
+let timeGoalLastTick  = Date.now();
 let justWriteWordStart = 0;
 let justWriteTabId    = null;
 let readmeTabId       = null;
@@ -2720,6 +2729,16 @@ function setGoal(n) {
 function updateGoalBar(words, prev) {
   const bar = document.getElementById('goal-bar');
   const wc  = document.getElementById('word-count');
+  if (timeGoalMin) {
+    // Whole minutes only, so nothing ticks at you. Other tabs just show their words.
+    const onTab  = timeGoalTabId === null || activeTabId === timeGoalTabId;
+    const hasSel = view && !view.state.selection.main.empty;
+    bar.style.width = onTab ? Math.min(100, timeGoalSpent / (timeGoalMin * 600)) + '%' : '0%';
+    bar.classList.toggle('active', onTab);
+    if (!hasSel) wc.textContent = (onTab ? Math.floor(timeGoalSpent / 60000) + ' / ' + timeGoalMin + ' min · ' : '')
+      + words + ' word' + (words !== 1 ? 's' : '');
+    return;
+  }
   if (!goalTarget) {
     bar.style.width = '0%';
     bar.classList.remove('active');
@@ -2744,10 +2763,82 @@ function updateGoalBar(words, prev) {
   }
 }
 
+// ── Time goal ─────────────────────────────────────────────────────────
+// Time spent with the page, not words produced. It counts only while its tab is active and Tree is the
+// front window and visible: a 5s tick, with gaps over 10s dropped, so switching tabs or apps, locking
+// the screen and sleep all pause it. Typing isn't required.
+const timeMessages = [
+  'that\'s your time. well done.',
+  'you stayed with it.',
+  'time reached. take a moment.',
+  'you showed up. that\'s the work.',
+];
+
+// The goal prompt takes both: 500 is words; 25m, 25 min, 1h, 1h30m, 90m and 1:30 (h:mm) are time; 0 clears
+function parseGoal(raw) {
+  const s = String(raw).trim().toLowerCase().replace(/\s+/g, '');
+  if (s === '' || /^0+$/.test(s)) return { clear: true };
+  if (/^\d+$/.test(s)) return { words: Math.min(99999, Number(s)) };
+  const asTime = n => (n > 0 ? { minutes: Math.min(5999, n) } : { clear: true });
+  let m = s.match(/^(\d+):([0-5]\d)$/);
+  if (m) return asTime(Number(m[1]) * 60 + Number(m[2]));
+  m = s.match(/^(?:(\d+)h(?:ours?|rs?)?)?(?:(\d+)(?:m(?:in(?:ute)?s?)?)?)?$/);   // the m is optional after hours: 1h30
+  if (m && (m[1] || m[2])) return asTime(Number(m[1] || 0) * 60 + Number(m[2] || 0));
+  return null;
+}
+
+// "25 minutes", "1 hour", "1 hour 30 minutes"
+function fmtMinutes(n) {
+  const h = Math.floor(n / 60), m = n % 60;
+  const p = (k, w) => k + ' ' + w + (k !== 1 ? 's' : '');
+  return [h ? p(h, 'hour') : '', m || !h ? p(m, 'minute') : ''].filter(Boolean).join(' ');
+}
+
+function setTimeGoal(min) {
+  timeGoalMin      = Math.max(0, Math.floor(min) || 0);
+  timeGoalSpent    = 0;
+  timeGoalTabId    = timeGoalMin ? activeTabId : null;
+  timeGoalLastTick = Date.now();
+  document.getElementById('inp-time-goal').value = timeGoalMin || '';
+}
+
+// One goal at a time: setting either kind clears the other. Returns false for input it can't read.
+function applyGoal(g) {
+  if (!g) return false;
+  setTimeGoal(g.minutes || 0);
+  setGoal(g.words || 0);
+  saveSettings();
+  if (document.getElementById('chk-welcome').checked) {
+    typeStatusMessage(g.words ? 'word goal: ' + g.words + '.'
+      : g.minutes ? 'time goal: ' + fmtMinutes(g.minutes) + '.'
+      : 'goal cleared.');
+  }
+  return true;
+}
+
+setInterval(function tickTimeGoal() {
+  const now = Date.now(), gap = now - timeGoalLastTick;
+  timeGoalLastTick = now;
+  if (!timeGoalMin) return;
+  if (timeGoalTabId === null) timeGoalTabId = activeTabId;
+  if (!tabs.some(t => t.id === timeGoalTabId)) { setTimeGoal(0); updateGoalBar(lastWordCount, -1); saveSettings(); return; }   // its tab was closed
+  if (gap > 10000 || document.visibilityState !== 'visible' || !document.hasFocus() || activeTabId !== timeGoalTabId) return;
+  const target = timeGoalMin * 60000, before = timeGoalSpent;
+  timeGoalSpent += gap;
+  if (before < target && timeGoalSpent >= target && document.getElementById('chk-welcome').checked) {
+    typeStatusMessage(timeMessages[Math.floor(Math.random() * timeMessages.length)]);
+  }
+  if (Math.floor(before / 60000) !== Math.floor(timeGoalSpent / 60000)) {
+    updateGoalBar(lastWordCount, lastWordCount);
+    saveSettings();
+  }
+}, 5000);
+
 function openGoalPrompt() {
   const overlay = document.getElementById('goal-prompt-overlay');
   const input   = document.getElementById('goal-prompt-input');
-  input.value   = goalTarget || '';
+  input.value   = timeGoalMin ? timeGoalMin + 'm' : (goalTarget || '');
+  input.classList.remove('invalid');
   overlay.style.display = 'flex';
   setTimeout(() => input.focus(), 50);
 }
@@ -2758,8 +2849,8 @@ function closeGoalPrompt() {
 
 document.getElementById('goal-prompt-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') {
-    setGoal(parseInt(document.getElementById('goal-prompt-input').value) || 0);
-    closeGoalPrompt();
+    if (applyGoal(parseGoal(e.target.value))) closeGoalPrompt();
+    else e.target.classList.add('invalid');   // stays open
   } else if (e.key === 'Escape') {
     closeGoalPrompt();
   }
@@ -2767,8 +2858,14 @@ document.getElementById('goal-prompt-input').addEventListener('keydown', e => {
 document.getElementById('goal-prompt-overlay').addEventListener('click', e => {
   if (e.target === e.currentTarget) closeGoalPrompt();
 });
+document.getElementById('goal-prompt-input').addEventListener('input', e => e.target.classList.remove('invalid'));
 document.getElementById('inp-goal').addEventListener('change', function() {
-  setGoal(parseInt(this.value) || 0);
+  const n = parseInt(this.value) || 0;
+  applyGoal(n > 0 ? { words: n } : { clear: true });
+});
+document.getElementById('inp-time-goal').addEventListener('change', function() {
+  const n = parseInt(this.value) || 0;
+  applyGoal(n > 0 ? { minutes: n } : { clear: true });
 });
 
 // ── Status messages ──────────────────────────────────────────────────
@@ -3857,6 +3954,8 @@ function saveSettings() {
       mode:          currentMode,
       goalTarget:    goalTarget,
       goalBaseline:  goalBaseline,
+      timeGoalMin:   timeGoalMin,
+      timeGoalSpent: timeGoalSpent,
     }));
   } catch(e) {}
 }
@@ -3933,6 +4032,12 @@ function loadSettings() {
       goalTarget   = s.goalTarget;
       goalBaseline = s.goalBaseline || 0;
       document.getElementById('inp-goal').value = goalTarget;
+    }
+    if (s.timeGoalMin) {
+      timeGoalMin   = s.timeGoalMin;
+      timeGoalSpent = s.timeGoalSpent || 0;
+      timeGoalTabId = null;   // attaches to whichever tab is active once tabs are restored
+      document.getElementById('inp-time-goal').value = timeGoalMin;
     }
     syncThemeUI();
     applyStatusBarVisibility();
@@ -4482,7 +4587,7 @@ KEYBOARD SHORTCUTS
     Ctrl+Shift+G    Toggle zen mode
     Ctrl+Shift+J    Activate Just Write mode
     Ctrl+Shift+N    Insert annotation
-    Ctrl+Shift+W    Set word count goal
+    Ctrl+Shift+W    Set word or time goal
     Ctrl+/          Open shortcut reference
 
   History
@@ -4574,6 +4679,22 @@ WORD COUNT GOAL  (Ctrl+Shift+W)
 
   Set goal via Ctrl+Shift+W or the word count goal field in
   Settings. Set to 0 to clear.
+
+
+TIME GOAL  (Ctrl+Shift+W)
+
+  For sessions measured in time with the page rather than words
+  produced. Type 25m, 1h, 1h30m, 90m or 1:30 into the goal prompt
+  (or use the time goal field in Settings). The status bar shows
+  "X / goal min · N words" in whole minutes, the same hairline bar
+  fills, and a message fires when you reach it. It keeps counting
+  after that.
+
+  The clock runs only while the tab you set it on is active and
+  Tree is the front window. Switching tabs or apps, locking the
+  screen or letting the computer sleep pauses it. Typing isn't
+  required. One goal at a time: setting a word goal clears a time
+  goal, and the other way round.
 
   Annotation content is never counted toward the word count.
 
