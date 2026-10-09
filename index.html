@@ -500,6 +500,9 @@
   }
   #statusbar .stat-left  { display: flex; gap: 12px; }
   #statusbar .stat-right { display: flex; gap: 12px; }
+  /* Click the word count to set a word or time goal, as in the Obsidian plugin */
+  #word-count { cursor: pointer; transition: color 0.2s; }
+  #word-count:hover { color: var(--text); }
   #statusbar .stat-centre {
     position: absolute;
     left: 50%;
@@ -1530,7 +1533,7 @@
 
 <div id="statusbar">
   <div class="stat-left">
-    <span id="word-count">0 words</span>
+    <span id="word-count" aria-label="Set a word or time goal">0 words</span>
     <span id="char-count">0 chars</span>
     <span id="line-count">1 line</span>
   </div>
@@ -2858,6 +2861,7 @@ document.getElementById('goal-prompt-input').addEventListener('keydown', e => {
 document.getElementById('goal-prompt-overlay').addEventListener('click', e => {
   if (e.target === e.currentTarget) closeGoalPrompt();
 });
+document.getElementById('word-count').addEventListener('click', openGoalPrompt);
 document.getElementById('goal-prompt-input').addEventListener('input', e => e.target.classList.remove('invalid'));
 document.getElementById('inp-goal').addEventListener('change', function() {
   const n = parseInt(this.value) || 0;
@@ -4677,15 +4681,16 @@ WORD COUNT GOAL  (Ctrl+Shift+W)
   fires when you hit the target. The goal resets if you drop below
   and write back up, so it can fire again.
 
-  Set goal via Ctrl+Shift+W or the word count goal field in
-  Settings. Set to 0 to clear.
+  Set goal by clicking the word count, with Ctrl+Shift+W, or with
+  the word count goal field in Settings. Set to 0 to clear.
 
 
 TIME GOAL  (Ctrl+Shift+W)
 
   For sessions measured in time with the page rather than words
-  produced. Type 25m, 1h, 1h30m, 90m or 1:30 into the goal prompt
-  (or use the time goal field in Settings). The status bar shows
+  produced. Click the word count (or press Ctrl+Shift+W) and type
+  25m, 1h, 1h30m, 90m or 1:30, or use the time goal field in
+  Settings. The status bar shows
   "X / goal min · N words" in whole minutes, the same hairline bar
   fills, and a message fires when you reach it. It keeps counting
   after that.
