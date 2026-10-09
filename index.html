@@ -1748,7 +1748,7 @@
     <p class="about-sub">A Markdown Editor</p>
     <p class="about-credit">Vibe coded by Dan</p>
     <p class="about-copy">© 2026</p>
-    <p class="about-version"><span style="font-size:13px;">v1.8</span><span style="font-size:11px; opacity:0.35; margin: 0 5px;">·</span><a href="#" style="font-size:11px; color:var(--accent); opacity:0.5; text-decoration:none;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='0.5'" onclick="document.getElementById('about-overlay').style.display='none'; openReadmeTab(); return false;">readme</a></p>
+    <p class="about-version"><span style="font-size:13px;">v1.9</span><span style="font-size:11px; opacity:0.35; margin: 0 5px;">·</span><a href="#" style="font-size:11px; color:var(--accent); opacity:0.5; text-decoration:none;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='0.5'" onclick="document.getElementById('about-overlay').style.display='none'; openReadmeTab(); return false;">readme</a></p>
     <p style="margin-top:4px; font-size:11px;"><a href="https://buymeacoffee.com/dandanmian" target="_blank" style="color:var(--accent); opacity:0.7; text-decoration:none;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">☕ buy me a coffee</a></p>
   </div>
 </div>
@@ -1819,7 +1819,7 @@ const JW_KEY       = 'tree-just-write';
 const GOAL_KEY     = 'tree-goal-target';
 const JW_WORDS     = 500;
 const JW_MINUTES   = 30;
-const VERSION      = '1.7';
+const VERSION      = '1.9';
 const LOCK_KEY        = 'tree-lock';
 const LOCK_ACTIVE_KEY = 'tree-lock-active';
 
@@ -4522,9 +4522,23 @@ document.addEventListener('keydown', e => {
 
 // ── README tab ────────────────────────────────────────────────────────
 const README_CONTENT = `TREE EDITOR
-Version 1.7
+Version 1.9
 
 A distraction-free markdown editor built on CodeMirror 6.
+
+─────────────────────────────────────────────────────────────────
+
+WHAT'S NEW IN 1.9
+
+  · Time goal. Write for a set time instead of a word count: type
+    25m, 1h30m or 1:30 into the goal prompt. The clock pauses when
+    you switch tabs or apps, or lock the screen.
+  · Click the word count to set a word or time goal.
+  · Password lock, in Settings › Privacy. Ctrl+Shift+L locks.
+  · Moonwalker glows like the Genesis title screen, and stays sharp
+    on iPhone and iPad.
+  · Terminal glows follow the text color, with brighter links.
+  · DejaVu Sans Mono in the font list.
 
 ─────────────────────────────────────────────────────────────────
 
