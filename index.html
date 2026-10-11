@@ -645,11 +645,12 @@
   /* ── Block and underline cursors: custom themes, Terminal CRT, Amber CRT and Doogie Journal.
         shapeCursorPlugin draws them (.tree-cursor-shape) the size of the character they sit on, and
         CodeMirror's bar steps aside (.tree-shape-cursor-on). A custom theme's block is tinted, not solid,
-        so the letter under it stays readable. The CRT rules above now only shape the drop cursor. ── */
+        so the letter under it stays readable: 40%, or more where the accent is too muted for that to show
+        (blockStrength()). The CRT rules above now only shape the drop cursor. ── */
   .tree-cursor-shape { position: absolute; display: none; pointer-events: none; z-index: 150; animation: cm-blink 1s infinite; }
   .cm-focused .tree-cursor-shape { display: block; }
   .tree-shape-cursor-on .cm-cursorLayer .cm-cursor { display: none !important; }
-  .tree-cursor-shape.is-block { background-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+  .tree-cursor-shape.is-block { background-color: color-mix(in srgb, var(--accent) var(--block-strength, 40%), transparent); }
   .tree-cursor-shape.is-underline { background-color: var(--accent); }
   body[data-theme="terminal"].crt-on .tree-cursor-shape.is-block { background-color: #33ff33; box-shadow: 0 0 10px rgba(51,255,51,0.55), 0 0 3px rgba(51,255,51,0.7); }
   body[data-theme="terminal"].amber-crt .tree-cursor-shape.is-block { background-color: #ffb000; box-shadow: 0 0 10px rgba(255,176,0,0.55), 0 0 3px rgba(255,176,0,0.7); }
@@ -1833,7 +1834,7 @@
     <p class="about-sub">A Markdown Editor</p>
     <p class="about-credit">Vibe coded by Dan</p>
     <p class="about-copy">© 2026</p>
-    <p class="about-version"><span style="font-size:13px;">v1.10</span><span style="font-size:11px; opacity:0.35; margin: 0 5px;">·</span><a href="#" style="font-size:11px; color:var(--accent); opacity:0.5; text-decoration:none;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='0.5'" onclick="document.getElementById('about-overlay').style.display='none'; openReadmeTab(); return false;">readme</a></p>
+    <p class="about-version"><span style="font-size:13px;">v1.10.1</span><span style="font-size:11px; opacity:0.35; margin: 0 5px;">·</span><a href="#" style="font-size:11px; color:var(--accent); opacity:0.5; text-decoration:none;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='0.5'" onclick="document.getElementById('about-overlay').style.display='none'; openReadmeTab(); return false;">readme</a></p>
     <p style="margin-top:4px; font-size:11px;"><a href="https://buymeacoffee.com/dandanmian" target="_blank" style="color:var(--accent); opacity:0.7; text-decoration:none;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">☕ buy me a coffee</a></p>
   </div>
 </div>
@@ -1904,7 +1905,7 @@ const JW_KEY       = 'tree-just-write';
 const GOAL_KEY     = 'tree-goal-target';
 const JW_WORDS     = 500;
 const JW_MINUTES   = 30;
-const VERSION      = '1.10';
+const VERSION      = '1.10.1';
 const LOCK_KEY        = 'tree-lock';
 const LOCK_ACTIVE_KEY = 'tree-lock-active';
 
@@ -3453,6 +3454,29 @@ const CUSTOM_SLOTS = [
 const CURSOR_STYLES = ['line', 'block', 'underline'];
 const customSlot = val => CUSTOM_SLOTS.find(slot => slot.key === val);
 
+// How much one color stands out from another: WCAG's contrast ratio, 1 (the same) to 21 (black on white).
+function luminance(rgb) {
+  const [r,g,b] = rgb.map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+function contrast(a, b) {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+// The block cursor is the accent at 40% over the background. A muted accent leaves that nearly invisible, so the tint
+// goes up, a point at a time, until the block stands out from the background as it does in a theme that reads well
+// (BLOCK_SEEN). The block is drawn over the letter, which tints the letter too, and at 100% hides it. So the tint
+// stops early if the letter would get hard to read through it (LETTER_READABLE). The Obsidian plugin does the same.
+const BLOCK_BASE = 40, BLOCK_SEEN = 2.05, LETTER_READABLE = 1.85;
+function blockStrength(bg, text, accent) {
+  const b = hexToRgb(bg), t = hexToRgb(text), a = hexToRgb(accent);
+  const under = (c, pct) => a.map((v, i) => v * pct / 100 + c[i] * (1 - pct / 100));   // c seen through the block
+  let pct = BLOCK_BASE;
+  while (pct < 100 && contrast(under(b, pct), b) < BLOCK_SEEN && contrast(under(t, pct + 1), under(b, pct + 1)) >= LETTER_READABLE) pct++;
+  return pct;
+}
+
 function applyCustomColors() {
   const slot = customSlot(document.getElementById('theme-select').value);
   if (!slot) return;
@@ -3466,13 +3490,14 @@ function applyCustomColors() {
   document.documentElement.style.setProperty('--accent', accent);
   document.documentElement.style.setProperty('--muted',  blendHex(text,bg,0.5));
   document.documentElement.style.setProperty('--border', blendHex(text,bg,0.15));
+  document.documentElement.style.setProperty('--block-strength', blockStrength(bg, text, accent) + '%');
   const cursor = document.getElementById('custom-cursor' + sfx).value;
   document.body.classList.toggle('cursor-block',     cursor === 'block');
   document.body.classList.toggle('cursor-underline', cursor === 'underline');
 }
 
 function clearCustomColors() {
-  ['--bg','--surface','--text','--accent','--muted','--border'].forEach(v =>
+  ['--bg','--surface','--text','--accent','--muted','--border','--block-strength'].forEach(v =>
     document.documentElement.style.removeProperty(v)
   );
   document.body.classList.remove('cursor-block', 'cursor-underline');
@@ -4771,7 +4796,7 @@ document.addEventListener('keydown', e => {
 
 // ── README tab ────────────────────────────────────────────────────────
 const README_CONTENT = `TREE EDITOR
-Version 1.10
+Version 1.10.1
 
 A distraction-free markdown editor built on CodeMirror 6.
 
@@ -4788,6 +4813,8 @@ WHAT'S NEW IN 1.10
   · Time goals of an hour or more show hours and minutes:
     12m / 1h 30m.
   · 14px in the size list.
+  · 1.10.1: a custom theme's block cursor is stronger where
+    its accent is muted, so it no longer fades into the page.
 
 ─────────────────────────────────────────────────────────────────
 
