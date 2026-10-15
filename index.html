@@ -1834,7 +1834,7 @@
     <p class="about-sub">A Markdown Editor</p>
     <p class="about-credit">Vibe coded by Dan</p>
     <p class="about-copy">© 2026</p>
-    <p class="about-version"><span style="font-size:13px;">v1.10.1</span><span style="font-size:11px; opacity:0.35; margin: 0 5px;">·</span><a href="#" style="font-size:11px; color:var(--accent); opacity:0.5; text-decoration:none;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='0.5'" onclick="document.getElementById('about-overlay').style.display='none'; openReadmeTab(); return false;">readme</a></p>
+    <p class="about-version"><span style="font-size:13px;">v1.10.2</span><span style="font-size:11px; opacity:0.35; margin: 0 5px;">·</span><a href="#" style="font-size:11px; color:var(--accent); opacity:0.5; text-decoration:none;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='0.5'" onclick="document.getElementById('about-overlay').style.display='none'; openReadmeTab(); return false;">readme</a></p>
     <p style="margin-top:4px; font-size:11px;"><a href="https://buymeacoffee.com/dandanmian" target="_blank" style="color:var(--accent); opacity:0.7; text-decoration:none;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">☕ buy me a coffee</a></p>
   </div>
 </div>
@@ -1905,7 +1905,7 @@ const JW_KEY       = 'tree-just-write';
 const GOAL_KEY     = 'tree-goal-target';
 const JW_WORDS     = 500;
 const JW_MINUTES   = 30;
-const VERSION      = '1.10.1';
+const VERSION      = '1.10.2';
 const LOCK_KEY        = 'tree-lock';
 const LOCK_ACTIVE_KEY = 'tree-lock-active';
 
@@ -2390,10 +2390,38 @@ const formatDecos = {
   Strikethrough:  Decoration.mark({ class: 'cm-tree-strike' }),
 };
 
+// Auto-pair puts the closing mark right after the cursor, so a space typed
+// before it (`*one |*`) stops Markdown reading it as a closing mark, and the
+// style blinks off and on with every word. While the cursor sits inside a
+// pair on its line, keep the span styled.
+const pendingDecos = {
+  '*':   [formatDecos.Emphasis],
+  '**':  [formatDecos.StrongEmphasis],
+  '***': [formatDecos.StrongEmphasis, formatDecos.Emphasis],
+  '~~':  [formatDecos.Strikethrough],
+};
+
+function pendingFormatRanges(state) {
+  const sel = state.selection.main;
+  if (!sel.empty) return [];
+  const line   = state.doc.lineAt(sel.head);
+  const before = line.text.slice(0, sel.head - line.from);
+  const after  = line.text.slice(sel.head - line.from);
+  const open  = /(^|[^*~\\])(\*{1,3}|~~)(?=\S)([^*~]*)$/.exec(before);
+  const close = /^([^*~]*)(\*+|~+)/.exec(after);
+  if (!open || !close || open[2] !== close[2]) return [];
+  // Only the case Markdown misses: whitespace just before the closing mark
+  const inner = open[3] + close[1];
+  if (!/\s$/.test(inner)) return [];
+  const from = line.from + open.index + open[1].length;
+  const to   = sel.head + close[1].length + close[2].length;
+  return pendingDecos[open[2]].map(deco => ({ from, to, deco }));
+}
+
 const inlineFormattingPlugin = ViewPlugin.fromClass(class {
   constructor(view) { this.decorations = this._build(view); }
   update(u) {
-    if (u.docChanged || u.viewportChanged)
+    if (u.docChanged || u.viewportChanged || u.selectionSet)
       this.decorations = this._build(u.view);
   }
   _build(view) {
@@ -2408,6 +2436,7 @@ const inlineFormattingPlugin = ViewPlugin.fromClass(class {
         },
       });
     }
+    ranges.push(...pendingFormatRanges(state));
     ranges.sort((a, b) => a.from - b.from || b.to - a.to);
     const builder = new RangeSetBuilder();
     for (const r of ranges) builder.add(r.from, r.to, r.deco);
@@ -4796,7 +4825,7 @@ document.addEventListener('keydown', e => {
 
 // ── README tab ────────────────────────────────────────────────────────
 const README_CONTENT = `TREE EDITOR
-Version 1.10.1
+Version 1.10.2
 
 A distraction-free markdown editor built on CodeMirror 6.
 
@@ -4815,6 +4844,8 @@ WHAT'S NEW IN 1.10
   · 14px in the size list.
   · 1.10.1: a custom theme's block cursor is stronger where
     its accent is muted, so it no longer fades into the page.
+  · 1.10.2: italic and bold stay on while you type a space
+    between the asterisks.
 
 ─────────────────────────────────────────────────────────────────
 
