@@ -4338,7 +4338,9 @@ function loadSettings() {
       const font = s.previewFont || 'var(--editor-font)';
       document.documentElement.style.setProperty('--preview-font', font);
     }
-    if (s.mode) setMode(s.mode);
+    // Preview mode has no editable text, so never reopen into it — a
+    // reload should always leave you somewhere you can type.
+    if (s.mode && s.mode !== 'preview') setMode(s.mode);
     if (s.goalTarget) {
       goalTarget   = s.goalTarget;
       goalBaseline = s.goalBaseline || 0;
