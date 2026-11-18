@@ -1953,7 +1953,7 @@ const JW_KEY       = 'tree-just-write';
 const GOAL_KEY     = 'tree-goal-target';
 const JW_WORDS     = 500;
 const JW_MINUTES   = 30;
-const VERSION      = '1.10.2';
+const VERSION      = '1.12.0';
 const LOCK_KEY        = 'tree-lock';
 const LOCK_ACTIVE_KEY = 'tree-lock-active';
 
@@ -5131,27 +5131,26 @@ document.addEventListener('keydown', e => {
 
 // ── README tab ────────────────────────────────────────────────────────
 const README_CONTENT = `TREE EDITOR
-Version 1.10.2
+Version 1.12.0
 
 A distraction-free markdown editor built on CodeMirror 6.
 
 ─────────────────────────────────────────────────────────────────
 
-WHAT'S NEW IN 1.10
+WHAT'S NEW IN 1.12
 
-  · Three custom themes. Give each a name and a line, block or
-    underline cursor, under its colors in the style panel.
-  · Export a custom theme as a file, and import one to share it.
-    The same file works in Ginkgo and the Obsidian plugin.
-  · Block and underline cursors fit the letter they sit on, in
-    any font. Terminal CRT included.
-  · Time goals of an hour or more show hours and minutes:
-    12m / 1h 30m.
-  · 14px in the size list.
-  · 1.10.1: a custom theme's block cursor is stronger where
-    its accent is muted, so it no longer fades into the page.
-  · 1.10.2: italic and bold stay on while you type a space
-    between the asterisks.
+  · One word menu for spelling, definitions and synonyms.
+    Double-click any word, or click one with a wavy underline.
+    Misspellings get suggestions, add to dictionary and ignore;
+    other words get the count, define and synonyms.
+  · "all" fixes every copy of a repeated misspelling at once,
+    keeping each one's capital letters.
+  · Ctrl/Cmd+; opens the menu at the next misspelling. Arrow
+    keys and Enter pick an item.
+  · The word count now treats "don't" as one word and counts
+    "week's" toward "week".
+  · 1.11: a built-in spellchecker. It works offline and gives
+    the same suggestions on Mac, Windows and Linux.
 
 ─────────────────────────────────────────────────────────────────
 
