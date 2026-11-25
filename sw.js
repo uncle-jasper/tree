@@ -1,4 +1,4 @@
-const CACHE = 'tree-v43';
+const CACHE = 'tree-v44';
 const ASSETS = ['/tree/', '/tree/index.html', '/tree/manifest.json', '/tree/icon.svg',
   '/tree/spell.js', '/tree/spell-words.txt'];
 
