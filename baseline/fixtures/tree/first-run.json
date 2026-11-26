@@ -1,0 +1,12 @@
+{
+  "id": "first-run",
+  "label": "nothing saved yet",
+  "app": "tree",
+  "madeFrom": "b0daef2",
+  "settings": null,
+  "session": null,
+  "after": {
+    "pack": "classic",
+    "theme": "parchment"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "id": "first-run",
+  "label": "nothing saved yet",
+  "app": "ginkgo",
+  "madeFrom": "f91c2c9",
+  "settings": null,
+  "session": null,
+  "after": {
+    "pack": "classic",
+    "theme": "parchment"
+  }
+}
