@@ -1,0 +1,79 @@
+# Theme packs: the plan
+
+The plan for bringing theme packs to Tree, Ginkgo and the Tree Obsidian plugin. It records what's decided, what's still open, and the order of work, so each session picks up where the last one stopped.
+
+The packs themselves, their format and the shelf live in [`uncle-jasper/tree-packs`](https://github.com/uncle-jasper/tree-packs). This file is about the apps.
+
+**Status:** Phase 0 (design), waiting for Dan's approval. Nothing in the apps has changed.
+
+## What a pack is
+
+A set of themes grouped by mood, like Rain (overcast, rain, downpour, wet street, wet neon). In each app's quick panel, a **pack** row picks the pack and the **theme** row steps through that pack's themes only, so the list stays short however many packs exist. A theme's switches (falling rain, crt) appear under it.
+
+Packs are installed from a shelf, the `tree-packs` repo published on GitHub, without updating the apps. A pack file holds only data (colors, names, effect settings); the effects are built into each app.
+
+## Decisions
+
+| Decision | Choice |
+|---|---|
+| Built into every app | **Classic**: parchment, paper, ash, sage, dark, moss, slate, custom 1–3 |
+| Also built in, for now | **Retro**: game boy, moonwalker, terminal (crt switch), amber crt, doogie journal. Moves to the shelf once the effects can match it exactly. |
+| Installing packs | From the shelf on GitHub (`uncle-jasper/tree-packs`), with pack-file import and export as backup |
+| Launch packs on the shelf | **Rain** (5 themes) and **Judgment Day** (4 themes) |
+| Rain | Moves from built in to the shelf, as a 5-theme pack |
+| Secret codes | Removed: Konami, ABACABB and umbre11a. Amber crt and doogie journal become ordinary Retro themes. |
+| Theme row | Steps within the current pack, never into the next one |
+| Choosing a pack | Opens on its everyday theme the first time; after that, on the theme last used in it (proposed, see open questions) |
+| Falling rain | A switch any Rain theme can turn on; on by default for downpour and wet neon |
+| Custom themes | Stay exactly as they are: three slots in Classic, same `.tree-theme.json` import and export, old files keep working |
+| Each app's packs | Each app keeps its own installed packs. Same files, same IDs, so a pack looks the same in all three. |
+| Pack sizes | Not a concern: a pack is a few KB. Packs are about keeping the list short. |
+
+## Rules for not breaking anything
+
+1. **Branches only.** Nothing reaches the live apps until it passes every check below.
+2. **Screenshots before and after.** Before any change, capture every existing theme in Tree and Ginkgo. After, capture again and compare. Any theme that looks different is a bug unless Dan approved the change.
+3. **Old settings always work.** Every saved setting from today's versions maps to the same look after the update (table below), tested with real saved settings.
+4. **Remember the colors in use.** The apps save the colors of the current theme, so it keeps showing even if its pack isn't installed (offline, or the shelf can't be reached).
+5. **Special themes untouched.** Terminal, the CRT looks, Moonwalker and Game Boy keep their current code until the effects match them exactly.
+6. **One app at a time:** Tree, then Ginkgo, then the plugin, each released and used before the next starts.
+7. **The plugin waits for Dan.** Each plugin release is checked by Dan in real Obsidian before it goes out; Claude sessions can't run Obsidian.
+8. **One engine.** The code that reads packs and runs effects is written once (`packs.js`), loaded by Tree and Ginkgo the way Tree loads `spell.js`, and copied into the plugin's build. Never three hand-kept copies.
+
+## Moving today's settings over
+
+| Saved today | After the update |
+|---|---|
+| any Classic theme or custom slot | same theme, in Classic |
+| game boy, moonwalker | same theme, in Retro |
+| terminal, crt off / on | terminal in Retro, crt switch off / on |
+| amber crt or doogie journal (session only today) | terminal in Retro, crt on |
+| rain, downpour off | Rain pack › rain, falling rain off |
+| rain, downpour on, falling rain on / off | Rain pack › downpour, falling rain on / off |
+
+For the two Rain rows, the app installs the Rain pack from the shelf on first launch. Until it can (offline), the saved colors keep the theme looking right; falling rain waits until the pack arrives.
+
+## Phases
+
+| Phase | Work | Dan approves |
+|---|---|---|
+| **0. Design** | Pack format (`tree-packs/FORMAT.md`), launch packs as real files, shelf index, checker, pack-studio guide (`tree-packs/CLAUDE.md`), this plan, mock-ups of the pack row and Packs screen | Format, lineup, mock-ups |
+| 1. Safety net | Baseline screenshots of every theme in Tree and Ginkgo; saved-settings fixtures from today's versions | — |
+| 2. Engine | `packs.js`: read and check packs, apply colors, effects (particles, light, overlay, glow, sheen), switches, saved colors. Classic and Retro defined as built-in packs. A pack previewer page in `tree-packs` uses the same engine. | — |
+| 3. Tree | Engine in; pack row; Packs screen (shelf, install, uninstall, update, import, export); settings moved over; Rain leaves the built-in themes; codes removed | Screenshot comparison, then release |
+| 4. Ginkgo | Same engine; Ginkgo's frame takes all six colors from the editor | Release |
+| 5. Plugin | Same engine; Aa panel pack row; packs kept in the vault so they sync to iPad | Dan's check in Obsidian, then release |
+| 6. Later, optional | Retro moves to the shelf; "save my custom themes as a pack" | — |
+
+The shelf (`tree-packs` with GitHub Pages) has to be live before phase 3 ships.
+
+## Open questions
+
+1. **Returning to a pack:** open on its everyday theme every time, or on the theme you last used in it? (Proposed: last used; everyday only the first time.)
+2. **Judgment Day's everyday theme:** cyberdyne (as written) or liquid metal?
+3. **HUD readability:** its text is 6.5:1 against the background, a little under the 7:1 target for long writing. Accept it as the loud theme, or brighten the red slightly?
+4. **Mock-ups:** approve the pack row and Packs screen designs before phase 2.
+
+## Dan's one-time setup
+
+- Turn on GitHub Pages for `tree-packs` (Settings → Pages → Deploy from branch → `main`, `/ (root)`), so the shelf is at `https://uncle-jasper.github.io/tree-packs/`.
