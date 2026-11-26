@@ -4,7 +4,7 @@ The plan for bringing theme packs to Tree, Ginkgo and the Tree Obsidian plugin. 
 
 The packs themselves, their format and the shelf live in [`uncle-jasper/tree-packs`](https://github.com/uncle-jasper/tree-packs). This file is about the apps.
 
-**Status:** Phase 0 (design), waiting for Dan's approval. Nothing in the apps has changed.
+**Status:** Phase 0 (design). Mock-ups approved. One open question left (HUD). Nothing in the apps has changed.
 
 ## What a pack is
 
@@ -23,7 +23,7 @@ Packs are installed from a shelf, the `tree-packs` repo published on GitHub, wit
 | Rain | Moves from built in to the shelf, as a 5-theme pack |
 | Secret codes | Removed: Konami, ABACABB and umbre11a. Amber crt and doogie journal become ordinary Retro themes. |
 | Theme row | Steps within the current pack, never into the next one |
-| Choosing a pack | Opens on its everyday theme the first time; after that, on the theme last used in it (proposed, see open questions) |
+| Choosing a pack | Opens on its everyday theme the first time; after that, on the theme last used in it |
 | Falling rain | A switch any Rain theme can turn on; on by default for downpour and wet neon |
 | Custom themes | Stay exactly as they are: three slots in Classic, same `.tree-theme.json` import and export, old files keep working |
 | Each app's packs | Each app keeps its own installed packs. Same files, same IDs, so a pack looks the same in all three. |
@@ -69,10 +69,9 @@ The shelf (`tree-packs` with GitHub Pages) has to be live before phase 3 ships.
 
 ## Open questions
 
-1. **Returning to a pack:** open on its everyday theme every time, or on the theme you last used in it? (Proposed: last used; everyday only the first time.)
-2. **Judgment Day's everyday theme:** cyberdyne (as written) or liquid metal?
-3. **HUD readability:** its text is 6.5:1 against the background, a little under the 7:1 target for long writing. Accept it as the loud theme, or brighten the red slightly?
-4. **Mock-ups:** approve the pack row and Packs screen designs before phase 2.
+1. **HUD readability:** its text is 6.5:1 against the background, a little under the 7:1 target for long writing. Recommended: `#ff5a48` → `#ff6a56` (7.2:1). Waiting for Dan.
+
+Settled in phase 0: mock-ups approved; returning to a pack opens the theme last used in it; Judgment Day's everyday theme is cyberdyne.
 
 ## Dan's one-time setup
 
