@@ -4,7 +4,7 @@ The plan for bringing theme packs to Tree, Ginkgo and the Tree Obsidian plugin. 
 
 The packs themselves, their format and the shelf live in [`uncle-jasper/tree-packs`](https://github.com/uncle-jasper/tree-packs). This file is about the apps.
 
-**Status:** Phase 0 (design). Mock-ups approved. One open question left (HUD). Nothing in the apps has changed.
+**Status:** Phase 0 (design) complete and approved. Next: phase 1. Nothing in the apps has changed.
 
 ## What a pack is
 
@@ -69,9 +69,9 @@ The shelf (`tree-packs` with GitHub Pages) has to be live before phase 3 ships.
 
 ## Open questions
 
-1. **HUD readability:** its text is 6.5:1 against the background, a little under the 7:1 target for long writing. Recommended: `#ff5a48` → `#ff6a56` (7.2:1). Waiting for Dan.
+None.
 
-Settled in phase 0: mock-ups approved; returning to a pack opens the theme last used in it; Judgment Day's everyday theme is cyberdyne.
+Settled in phase 0: mock-ups approved; returning to a pack opens the theme last used in it; Judgment Day's everyday theme is cyberdyne; HUD keeps its original red (`#ff5a48`, 6.5:1). Dan compared it with a brighter `#ff6a56` and chose the original.
 
 ## Dan's one-time setup
 
