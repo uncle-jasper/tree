@@ -8,7 +8,7 @@ Nothing here ships with the apps. Tree never loads these files.
 
 | Path | What it is |
 |---|---|
-| `fixtures/tree/`, `fixtures/ginkgo/` | One file per theme setting a person can have today: exactly what that app saved to `tree-editor-settings`, made by clicking through the app's own settings, plus where PACKS-PLAN.md says it must land after the update (`after`) |
+| `fixtures/tree/`, `fixtures/ginkgo/` | One file per theme setting a person can have today: exactly what that app saved to `tree-editor-settings`, made by running the app's own settings code (`setTheme`, the switches, `saveSettings`), plus where PACKS-PLAN.md says it must land after the update (`after`) |
 | `shots/` | 120 screenshots: 20 settings × 2 apps × (desktop write, desktop preview, phone write). `shots/index.html` shows them all on one page |
 | `sample.md` | The text shown in every shot |
 | `run.js` | Makes the fixtures, takes the shots, compares two sets |

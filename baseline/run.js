@@ -2,7 +2,7 @@
 // Theme packs safety net (PACKS-PLAN.md, phase 1).
 //
 //   node baseline/run.js fixtures [--ginkgo DIR]
-//       Drive today's Tree and Ginkgo through their own settings UI and save
+//       Drive today's Tree and Ginkgo through their own settings code and save
 //       exactly what each writes to localStorage, one file per theme setting,
 //       in baseline/fixtures/<app>/.
 //
