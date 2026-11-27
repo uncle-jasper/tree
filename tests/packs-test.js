@@ -442,7 +442,8 @@ async function treeTests(browser, url) {
     assert.strictEqual(await page.textContent('#packs-new'), '2 new');
     await page.click('#btn-packs');
     await page.click('#packs-installed .pk-btn:has-text("update")');
-    await page.waitForFunction(() => packs.installed.rain.version === '1.0.0');
+    const shelfVersion = JSON.parse(fs.readFileSync(path.join(PACKS_DIR, 'packs', 'rain.tree-pack.json'), 'utf8')).version;
+    await page.waitForFunction(v => packs.installed.rain.version === v, shelfVersion);
     assert.strictEqual(await page.evaluate(() => packs.installed.rain.themes[0].colors.bg), '#ccd4d6');
     await page.click('#btn-packs-close');
     assert.strictEqual(await page.textContent('#packs-new'), '', 'nothing new once seen and updated');
