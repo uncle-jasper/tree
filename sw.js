@@ -1,6 +1,6 @@
-const CACHE = 'tree-v44';
+const CACHE = 'tree-v45';
 const ASSETS = ['/tree/', '/tree/index.html', '/tree/manifest.json', '/tree/icon.svg',
-  '/tree/spell.js', '/tree/spell-words.txt'];
+  '/tree/spell.js', '/tree/spell-words.txt', '/tree/packs.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(

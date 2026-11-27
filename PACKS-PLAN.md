@@ -4,7 +4,7 @@ The plan for bringing theme packs to Tree, Ginkgo and the Tree Obsidian plugin. 
 
 The packs themselves, their format and the shelf live in [`uncle-jasper/tree-packs`](https://github.com/uncle-jasper/tree-packs). This file is about the apps.
 
-**Status:** Phase 0 (design) complete and approved. Next: phase 1. Nothing in the apps has changed.
+**Status:** Phases 1 and 2 done. Phase 3 (Tree 2.0) and phase 4 (Ginkgo 2.0) built on branch `claude/peaceful-ride-t07r40` in each repo, awaiting Dan's check. Tree: 55 of 60 baseline shots identical, the rest differ only where typing the old codes changed the tab name or line count. Ginkgo: the same, plus custom themes, whose frame now takes the editor's colors (the planned change, approved by Dan). Judgment Day 1.0.1 (steel mill's glow at 12%) and the shelf's update offer checked by Dan in the Tree preview. Before release, the shelf must be live (see Dan's one-time setup).
 
 ## What a pack is
 
@@ -23,11 +23,17 @@ Packs are installed from a shelf, the `tree-packs` repo published on GitHub, wit
 | Rain | Moves from built in to the shelf, as a 5-theme pack |
 | Secret codes | Removed: Konami, ABACABB and umbre11a. Amber crt and doogie journal become ordinary Retro themes. |
 | Theme row | Steps within the current pack, never into the next one |
+| Pack order | Classic, Retro, then installed packs alphabetically. Reordering (move up / move down) waits until there are enough packs to need it |
 | Choosing a pack | Opens on its everyday theme the first time; after that, on the theme last used in it |
 | Falling rain | A switch any Rain theme can turn on; on by default for downpour and wet neon |
 | Custom themes | Stay exactly as they are: three slots in Classic, same `.tree-theme.json` import and export, old files keep working |
-| Each app's packs | Each app keeps its own installed packs. Same files, same IDs, so a pack looks the same in all three. |
+| Each app's packs | Tree and Ginkgo share installed packs and the theme in use: they're on the same site, so the browser gives them one storage, as it already did for the theme. Home-screen apps on iPhone each have their own storage, so there each keeps its own. The plugin keeps its packs in the vault. Same files, same IDs, so a pack looks the same everywhere. |
 | Pack sizes | Not a concern: a pack is a few KB. Packs are about keeping the list short. |
+| Versions | Each app becomes 2.0 when its phase ships: Tree in phase 3, Ginkgo in 4, the plugin in 5 |
+| Also in each app's 2.0 | A 12px font size; the plugin's cursor shape (3px rounded bar) in Tree and Ginkgo |
+| Rain for people who used it | Tree carries a copy of the Rain pack 1.0.0 and installs it on first launch for anyone who had rain or downpour, so it looks the same even offline; the shelf offers updates after that |
+| Ginkgo before phase 4 | Tree and Ginkgo share saved settings (same site). Tree keeps writing the old theme setting alongside the pack, so today's Ginkgo still shows a theme it knows |
+| Just Write | Locks the theme as before: the pack row, theme list and Packs screen do nothing while it runs. More to look at later |
 
 ## Rules for not breaking anything
 
@@ -63,7 +69,7 @@ For the two Rain rows, the app installs the Rain pack from the shelf on first la
 | 3. Tree | Engine in; pack row; Packs screen (shelf, install, uninstall, update, import, export); settings moved over; Rain leaves the built-in themes; codes removed | Screenshot comparison, then release |
 | 4. Ginkgo | Same engine; Ginkgo's frame takes all six colors from the editor | Release |
 | 5. Plugin | Same engine; Aa panel pack row; packs kept in the vault so they sync to iPad | Dan's check in Obsidian, then release |
-| 6. Later, optional | Retro moves to the shelf; "save my custom themes as a pack" | — |
+| 6. Later, optional | Retro moves to the shelf; "save my custom themes as a pack"; move up / move down for packs on the Packs screen, once there are enough packs to need it | — |
 
 The shelf (`tree-packs` with GitHub Pages) has to be live before phase 3 ships.
 
