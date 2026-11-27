@@ -352,6 +352,8 @@ async function treeTests(browser, url) {
     await page.waitForFunction(() => packs.installed['judgment-day']);
     assert.match(await page.textContent('#packs-note'), /judgment day installed/);
     await page.click('#btn-packs-close');
+    await page.evaluate(() => selectPackTheme('judgment-day', 'liquid-metal'));
+    await page.evaluate(() => setSwitch('chrome sheen', false));
     await page.evaluate(() => selectPackTheme('judgment-day', 'hud'));
     assert.strictEqual(await page.evaluate(() => document.body.dataset.theme), 'pack');
     assert.strictEqual(await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--text').trim()), '#ff5a48');
@@ -369,6 +371,7 @@ async function treeTests(browser, url) {
     assert.match(await page.textContent('#packs-note'), /switched to dark/);
     st = await state(page);
     assert.deepStrictEqual([st.pack, st.theme, st.installed.length], ['classic', 'dark', 0]);
+    assert.deepStrictEqual(await page.evaluate(() => [Object.keys(packs.switches).filter(k => k.startsWith('judgment-day/')), packs.last['judgment-day']]), [[], undefined], 'nothing of the pack left behind');
     await ctx.close();
     assert.deepStrictEqual(errors, []);
   });

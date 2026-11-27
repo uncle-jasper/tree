@@ -4102,8 +4102,10 @@ function installPack(raw) {
 }
 function uninstallPack(id) {
   const name = packs.installed[id] ? packs.installed[id].name.toLowerCase() : id;
+  // Remove the pack and everything remembered about it.
   delete packs.installed[id];
   delete packs.last[id];
+  for (const key of Object.keys(packs.switches)) if (key.startsWith(id + '/')) delete packs.switches[key];
   savePackStore();
   if (packs.current.pack === id) {
     selectPackTheme('classic', 'dark');
