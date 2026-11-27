@@ -273,6 +273,50 @@ async function browserTests() {
     assert.ok(restart, 'new drops should start above the top');
   });
 
+  await test('contained: layers fill one element, sized to it (the Obsidian plugin, one per note)', async () => {
+    const page = await browser.newPage({ viewport: { width: 1000, height: 700 } });
+    await page.goto(url + 'tests/blank.html');
+    const packs = [TP.check(shelf('rain')).pack, TP.check(shelf('judgment-day')).pack];
+    const r = await page.evaluate(([rain, jd]) => {
+      const note = document.createElement('div');
+      note.style.cssText = 'position:relative;width:400px;height:300px';
+      note.innerHTML = '<p>writing</p>';
+      document.body.appendChild(note);
+      const stage = TreePacks.createStage({ root: note, layers: note, parts: ['layers'], contained: true, themeAttr: false });
+      stage.apply(rain.themes.find(t => t.id === 'wet-neon'), {});
+      const canvas = note.querySelector('canvas');
+      const out = {
+        canvas: [canvas.width, canvas.height, getComputedStyle(canvas).position],
+        firstIsLayer: note.firstElementChild.classList.contains('tp-behind'),
+        writingStill: !!note.querySelector('p'),
+        varsOnNote: note.style.getPropertyValue('--bg'),
+        style: document.querySelectorAll('style').length,
+      };
+      stage.apply(jd.themes.find(t => t.id === 'hud'), {});
+      out.front = note.lastElementChild.classList.contains('tp-front');
+      out.noCanvas = !note.querySelector('canvas');
+      stage.destroy();
+      out.clean = note.innerHTML === '<p>writing</p>';
+      // The window's own stage: colors with a prefix, and css, no layers
+      const win = TreePacks.createStage({ parts: ['colors', 'css'], varPrefix: '--tree-', themeAttr: false });
+      win.apply(jd.themes.find(t => t.id === 'liquid-metal'), {});
+      out.prefixed = document.body.style.getPropertyValue('--tree-bg');
+      out.unprefixed = document.body.style.getPropertyValue('--bg');
+      out.sheen = /background-clip: text/.test([...document.querySelectorAll('style')].map(x => x.textContent).join(''));
+      out.layers = document.querySelectorAll('.tp-layer').length;
+      out.dataset = document.body.dataset.theme;
+      win.destroy();
+      return out;
+    }, packs);
+    await page.close();
+    assert.deepStrictEqual(r.canvas.slice(2), ['absolute']);
+    assert.ok(r.canvas[0] >= 400 && r.canvas[1] >= 300, 'canvas sized to the note: ' + r.canvas);
+    assert.ok(r.firstIsLayer && r.writingStill && r.front && r.noCanvas && r.clean);
+    assert.strictEqual(r.varsOnNote, '');
+    assert.strictEqual(r.style, 0, 'a layers-only stage writes no CSS');
+    assert.deepStrictEqual([r.prefixed, r.unprefixed, r.sheen, r.layers, r.dataset], ['#15181b', '', true, 0, undefined]);
+  });
+
   await test('reduced motion: rain holds still, light does not flicker', async () => {
     const ctx = await browser.newContext({ reducedMotion: 'reduce' });
     const page = await ctx.newPage();
