@@ -49,7 +49,7 @@
     "pack": "rain",
     "theme": "downpour",
     "switches": {
-      "falling-rain": false
+      "falling rain": false
     }
   }
 }

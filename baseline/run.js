@@ -67,11 +67,11 @@ const FIXTURES = [
                                                                                                after: { pack: 'retro', theme: 'terminal', switches: { crt: true }, note: 'amber crt becomes an ordinary Retro theme; a saved setting can only ever say terminal + crt' } },
   { id: 'doogie-journal', label: 'doogie journal (ABACABB, session only)', make: { theme: 'terminal', checks: { 'chk-crt': true } }, session: 'doogie-journal',
                                                                                                after: { pack: 'retro', theme: 'terminal', switches: { crt: true }, note: 'doogie journal becomes an ordinary Retro theme; a saved setting can only ever say terminal + crt' } },
-  { id: 'rain',       label: 'rain, downpour off',            make: { theme: 'rain' },         after: { pack: 'rain', theme: 'rain', switches: { 'falling-rain': false } } },
+  { id: 'rain',       label: 'rain, downpour off',            make: { theme: 'rain' },         after: { pack: 'rain', theme: 'rain', switches: { 'falling rain': false } } },
   { id: 'rain-downpour', label: 'rain, downpour on, falling rain on', make: { theme: 'rain', checks: { 'chk-downpour': true } },
-                                                                                               after: { pack: 'rain', theme: 'downpour', switches: { 'falling-rain': true } } },
+                                                                                               after: { pack: 'rain', theme: 'downpour', switches: { 'falling rain': true } } },
   { id: 'rain-downpour-still', label: 'rain, downpour on, falling rain off', make: { theme: 'rain', checks: { 'chk-downpour': true, 'chk-falling': false } },
-                                                                                               after: { pack: 'rain', theme: 'downpour', switches: { 'falling-rain': false } } },
+                                                                                               after: { pack: 'rain', theme: 'downpour', switches: { 'falling rain': false } } },
 ];
 
 const VIEWS = [
