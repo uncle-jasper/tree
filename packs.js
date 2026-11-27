@@ -410,7 +410,10 @@
         ctx.lineWidth = 1; ctx.lineCap = 'round';
         for (const d of r.drops) {
           if (!d) continue;
-          ctx.strokeStyle = 'rgba(' + colorAt(d) + ',' + d.a + ')';
+          const lit = colorAt(d);
+          // Lit streaks are brightest near the lights at the top and bottom, as in the Rain study.
+          const a = lit === base ? d.a : d.a * (1 + 0.5 * Math.abs(1 - 2 * Math.min(1, Math.max(0, d.y / r.h))));
+          ctx.strokeStyle = 'rgba(' + lit + ',' + a + ')';
           ctx.beginPath();
           ctx.moveTo(d.x, d.y);
           ctx.lineTo(d.x - d.len * e.slant, d.y + d.len);
@@ -454,28 +457,34 @@
       return r;
     }
 
-    // light ─ soft colored light behind the page.
+    // light ─ soft colored light behind the page. Drawn the way the Rain
+    // and Judgment Day study pages drew it, which Dan approved.
     function lightLayers(e) {
       const reduce = win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (e.spots.length) {
-        const g = e.spots.map(s => `radial-gradient(ellipse ${s.w * 50}vw ${s.h * 50}vh at ${s.x * 100}% ${s.y * 100}%, ${rgba(s.color, s.strength)}, transparent)`);
+        const g = e.spots.map(s => `radial-gradient(ellipse ${s.w * 100}% ${s.h * 100}% at ${s.x * 100}% ${s.y * 100}%, ${rgba(s.color, s.strength)}, transparent 70%)`);
         const el = layer(-1, `background:${g.join(',')};`);
-        if (e.flicker && !reduce && el.animate)
-          el.animate([{ opacity: 1 }, { opacity: 1, offset: 0.9 }, { opacity: 0.55, offset: 0.91 }, { opacity: 1, offset: 0.92 },
-            { opacity: 0.75, offset: 0.95 }, { opacity: 1, offset: 0.96 }, { opacity: 1 }], { duration: 7300, iterations: Infinity });
+        if (e.flicker && !reduce && el.animate)      // a neon tube's hum
+          el.animate([{ opacity: 1 }, { opacity: 1, offset: 0.47 }, { opacity: 0.82, offset: 0.48 }, { opacity: 1, offset: 0.5 },
+            { opacity: 0.9, offset: 0.76 }, { opacity: 1 }], { duration: 6000, iterations: Infinity, easing: 'ease-in-out' });
       }
       if (e.streaks.length) {
-        const g = e.streaks.map(s => `radial-gradient(ellipse ${s.w * 50}vw ${s.h * 100}vh at ${s.x * 100}% 100%, ${rgba(s.color, s.strength)}, transparent)`);
-        const el = layer(-1, `background:${g.join(',')};`);
-        if (e.pulse && !reduce && el.animate)
-          el.animate([{ opacity: 1 }, { opacity: 0.7 }, { opacity: 1 }], { duration: 6000, iterations: Infinity, easing: 'ease-in-out' });
+        // Each streak fades upward from the bottom edge. The layer runs past
+        // the screen so the blur doesn't dim the streaks at its edges.
+        const g = e.streaks.map(s => {
+          const pos = s.w >= 1 ? 0 : Math.min(1, Math.max(0, (s.x - s.w / 2) / (1 - s.w))) * 100;
+          return `linear-gradient(to top, ${rgba(s.color, s.strength)}, transparent) ${pos.toFixed(2)}% 100% / ${s.w * 100}% ${s.h * 100}% no-repeat`;
+        });
+        const el = layer(-1, `inset:-40px;background:${g.join(',')};filter:blur(14px);`);
+        if (e.pulse && !reduce && el.animate)        // light breathing on wet pavement
+          el.animate([{ opacity: 1 }, { opacity: 0.75 }, { opacity: 1 }], { duration: 9000, iterations: Infinity, easing: 'ease-in-out' });
       }
     }
 
     // overlay ─ scanlines and a vignette in front of the page.
     function overlayLayer(e) {
       const g = [];
-      if (e.scanlines > 0) g.push(`repeating-linear-gradient(to bottom, rgba(0,0,0,${e.scanlines}) 0, rgba(0,0,0,${e.scanlines}) 1px, transparent 1px, transparent 3px)`);
+      if (e.scanlines > 0) g.push(`repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0,0,0,${e.scanlines}) 2px 3px)`);
       if (e.vignette && e.vignette.strength > 0) g.push(`radial-gradient(ellipse at center, transparent 55%, ${rgba(e.vignette.color, e.vignette.strength)} 100%)`);
       if (g.length) layer(2147483000, `background:${g.join(',')};`);
     }
@@ -483,20 +492,22 @@
     // glow ─ follows the color of what it's on.
     function glowCss(e) {
       const pct = Math.round(e.strength * 100);
-      const shadow = `0 0 ${(0.15 + 0.45 * e.strength).toFixed(2)}em color-mix(in srgb, currentColor ${pct}%, transparent)`;
       if (e.target === 'cursor')
-        return `${sel.cursor} { box-shadow: 0 0 ${Math.round(2 + 8 * e.strength)}px color-mix(in srgb, var(--accent) ${pct}%, transparent); }`;
+        return `${sel.cursor} { box-shadow: 0 0 ${Math.round(2 + 8 * e.strength)}px color-mix(in srgb, var(--accent) ${pct}%, transparent), 0 0 2px color-mix(in srgb, var(--accent) ${pct}%, white); }`;
+      const shadow = `0 0 ${(0.4 + 0.4 * e.strength).toFixed(2)}em color-mix(in srgb, currentColor ${pct}%, transparent)`;
       return `${e.target === 'links' ? sel.links : sel.text} { text-shadow: ${shadow}; }`;
     }
 
-    // sheen ─ a band of light sliding across headings.
+    // sheen ─ a band of light drifting back and forth across headings.
     function sheenCss(e) {
       const reduce = win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches;
       const name = uid + '-sheen';
-      return `@keyframes ${name} { from { background-position: 0% 50%; } to { background-position: -200% 50%; } }
-${sel.headings} { background-image: linear-gradient(90deg, ${e.colors.concat(e.colors[0]).join(', ')});
-  background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
-  ${reduce ? '' : `animation: ${name} ${e.seconds}s linear infinite;`} }`;
+      const n = e.colors.length - 1;
+      const stops = e.colors.map((c, i) => `${c} ${Math.round(i / n * 100)}%`).join(', ');
+      return `@keyframes ${name} { 0%, 100% { background-position: 0% 0; } 50% { background-position: 100% 0; } }
+${sel.headings} { background-image: linear-gradient(100deg, ${stops});
+  background-size: 220% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+  ${reduce ? '' : `animation: ${name} ${e.seconds}s ease-in-out infinite;`} }`;
     }
 
     function onResize() { for (const r of rains) r.resize(); }
