@@ -23,6 +23,7 @@ Packs are installed from a shelf, the `tree-packs` repo published on GitHub, wit
 | Rain | Moves from built in to the shelf, as a 5-theme pack |
 | Secret codes | Removed: Konami, ABACABB and umbre11a. Amber crt and doogie journal become ordinary Retro themes. |
 | Theme row | Steps within the current pack, never into the next one |
+| Pack order | Classic, Retro, then installed packs alphabetically. Reordering (move up / move down) waits until there are enough packs to need it |
 | Choosing a pack | Opens on its everyday theme the first time; after that, on the theme last used in it |
 | Falling rain | A switch any Rain theme can turn on; on by default for downpour and wet neon |
 | Custom themes | Stay exactly as they are: three slots in Classic, same `.tree-theme.json` import and export, old files keep working |
@@ -68,7 +69,7 @@ For the two Rain rows, the app installs the Rain pack from the shelf on first la
 | 3. Tree | Engine in; pack row; Packs screen (shelf, install, uninstall, update, import, export); settings moved over; Rain leaves the built-in themes; codes removed | Screenshot comparison, then release |
 | 4. Ginkgo | Same engine; Ginkgo's frame takes all six colors from the editor | Release |
 | 5. Plugin | Same engine; Aa panel pack row; packs kept in the vault so they sync to iPad | Dan's check in Obsidian, then release |
-| 6. Later, optional | Retro moves to the shelf; "save my custom themes as a pack" | — |
+| 6. Later, optional | Retro moves to the shelf; "save my custom themes as a pack"; move up / move down for packs on the Packs screen, once there are enough packs to need it | — |
 
 The shelf (`tree-packs` with GitHub Pages) has to be live before phase 3 ships.
 
