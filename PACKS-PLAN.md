@@ -4,7 +4,7 @@ The plan for bringing theme packs to Tree, Ginkgo and the Tree Obsidian plugin. 
 
 The packs themselves, their format and the shelf live in [`uncle-jasper/tree-packs`](https://github.com/uncle-jasper/tree-packs). This file is about the apps.
 
-**Status:** Phases 1 and 2 done. Phase 3 (Tree 2.0) and phase 4 (Ginkgo 2.0) built on branch `claude/peaceful-ride-t07r40` in each repo, awaiting Dan's check. Tree: 55 of 60 baseline shots identical, the rest differ only where typing the old codes changed the tab name or line count. Ginkgo: the same, plus custom themes, whose frame now takes the editor's colors (the planned change). Before release, the shelf must be live (see Dan's one-time setup).
+**Status:** Phases 1 and 2 done. Phase 3 (Tree 2.0) and phase 4 (Ginkgo 2.0) built on branch `claude/peaceful-ride-t07r40` in each repo, awaiting Dan's check. Tree: 55 of 60 baseline shots identical, the rest differ only where typing the old codes changed the tab name or line count. Ginkgo: the same, plus custom themes, whose frame now takes the editor's colors (the planned change, approved by Dan). Judgment Day 1.0.1 (steel mill's glow at 12%) and the shelf's update offer checked by Dan in the Tree preview. Before release, the shelf must be live (see Dan's one-time setup).
 
 ## What a pack is
 
