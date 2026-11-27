@@ -4,7 +4,7 @@ The plan for bringing theme packs to Tree, Ginkgo and the Tree Obsidian plugin. 
 
 The packs themselves, their format and the shelf live in [`uncle-jasper/tree-packs`](https://github.com/uncle-jasper/tree-packs). This file is about the apps.
 
-**Status:** Phase 1 (safety net) done: [`baseline/`](baseline/). Phase 2 (engine) built and awaiting Dan's look: [`packs.js`](packs.js), its tests in [`tests/`](tests/), and the previewer `preview.html` in tree-packs. Pack descriptions are now required. Nothing in the apps has changed.
+**Status:** Phases 1 and 2 done. Phase 3 (Tree 2.0) built on branch `claude/peaceful-ride-t07r40`, awaiting Dan's check: 55 of 60 baseline shots identical, the other 5 differ only in the tab name and line count that typing the old secret codes changed. Before release, the shelf must be live (see Dan's one-time setup).
 
 ## What a pack is
 
@@ -28,6 +28,11 @@ Packs are installed from a shelf, the `tree-packs` repo published on GitHub, wit
 | Custom themes | Stay exactly as they are: three slots in Classic, same `.tree-theme.json` import and export, old files keep working |
 | Each app's packs | Each app keeps its own installed packs. Same files, same IDs, so a pack looks the same in all three. |
 | Pack sizes | Not a concern: a pack is a few KB. Packs are about keeping the list short. |
+| Versions | Each app becomes 2.0 when its phase ships: Tree in phase 3, Ginkgo in 4, the plugin in 5 |
+| Also in each app's 2.0 | A 12px font size; the plugin's cursor shape (3px rounded bar) in Tree and Ginkgo |
+| Rain for people who used it | Tree carries a copy of the Rain pack 1.0.0 and installs it on first launch for anyone who had rain or downpour, so it looks the same even offline; the shelf offers updates after that |
+| Ginkgo before phase 4 | Tree and Ginkgo share saved settings (same site). Tree keeps writing the old theme setting alongside the pack, so today's Ginkgo still shows a theme it knows |
+| Just Write | Locks the theme as before: the pack row, theme list and Packs screen do nothing while it runs. More to look at later |
 
 ## Rules for not breaking anything
 

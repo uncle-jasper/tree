@@ -334,7 +334,8 @@
   .cm-line { padding: 0 !important; color: var(--text) !important; }
   @keyframes cm-blink  { 0%, 40% { opacity: 1; animation-timing-function: linear; } 50% { opacity: 0; } 90% { opacity: 0; animation-timing-function: linear; } 100% { opacity: 1; } }
   @keyframes cm-blink2 { 0%, 40% { opacity: 1; animation-timing-function: linear; } 50% { opacity: 0; } 90% { opacity: 0; animation-timing-function: linear; } 100% { opacity: 1; } }
-  .cm-cursor, .cm-dropCursor { border-left-color: var(--cursor, var(--accent)) !important; border-left-width: 2.5px !important; transform: scaleY(1.2); transform-origin: center center; }
+  /* The Obsidian plugin's cursor: a 3px bar with rounded ends (iA Writer's shape), a touch taller than the line */
+  .cm-cursor, .cm-dropCursor { border-left-color: var(--cursor, var(--accent)) !important; border-left-width: 3px !important; border-radius: 1.5px; margin-left: -1px; transform: scaleY(1.2); transform-origin: center center; }
   .cm-selectionBackground { background: var(--link, var(--accent)) !important; opacity: 0.25; }
   .cm-focused .cm-selectionBackground { background: var(--link, var(--accent)) !important; opacity: 0.25; }
   .cm-gutters { display: none !important; }
