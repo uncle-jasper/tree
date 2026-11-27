@@ -332,7 +332,9 @@
       for (const k in vars) { root.style.setProperty(k, vars[k]); setVars.push(k); }
       root.style.setProperty('color-scheme', theme.light ? 'light' : 'dark');
 
-      const css = [`${sel.text} ::selection, ${sel.text}::selection { background: var(--selection); }`];
+      // Selectors are lists ("a, b"): each part gets its own ::selection.
+      const each = (list, suffix) => list.split(',').map(x => x.trim() + suffix).join(', ');
+      const css = [`${each(sel.text, ' ::selection')}, ${each(sel.text, '::selection')} { background: var(--selection); }`];
       let behind = false, keep = [];
       on.forEach((e, i) => {
         if (e.type === 'particles') {

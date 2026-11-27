@@ -172,10 +172,16 @@ const clone = o => JSON.parse(JSON.stringify(o));
 })();
 
 // ── Browser half ─────────────────────────────────────────────────────────
+// Tree before packs (its own rain code), from git, for comparing rain with.
+const PRE_PACKS = 'b0daef2';
+let oldTree = null;
 function serve(root) {
+  if (!oldTree) oldTree = require('child_process').execSync(`git show ${PRE_PACKS}:index.html`, { cwd: ROOT, maxBuffer: 64 << 20 });
   return new Promise(resolve => {
     const srv = http.createServer((req, res) => {
       let p = decodeURIComponent(req.url.split('?')[0]); if (p.endsWith('/')) p += 'index.html';
+      if (p === '/old/index.html') { res.writeHead(200, { 'Content-Type': 'text/html' }); return res.end(oldTree); }
+      if (p.startsWith('/old/')) p = p.slice(4);
       const f = path.join(root, p);
       if (!f.startsWith(root) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end(); }
       res.writeHead(200, { 'Content-Type': { '.html': 'text/html', '.js': 'text/javascript' }[path.extname(f)] || 'application/octet-stream' });
@@ -195,13 +201,13 @@ async function browserTests() {
   const downpourFixture = JSON.parse(fs.readFileSync(path.join(ROOT, 'baseline', 'fixtures', 'tree', 'rain-downpour.json'), 'utf8'));
 
   for (const vp of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
-    await test(`falling rain matches Tree's downpour drop for drop (${vp.width}×${vp.height}, 240 frames)`, async () => {
+    await test(`falling rain matches pre-packs Tree's downpour drop for drop (${vp.width}×${vp.height}, 240 frames)`, async () => {
       const ctx = await browser.newContext({ viewport: vp, serviceWorkers: 'block' });
       await ctx.addInitScript(SEED);
       await ctx.addInitScript(s => localStorage.setItem('tree-editor-settings', s), JSON.stringify(downpourFixture.settings));
       const page = await ctx.newPage();
       await page.clock.install({ time: new Date('2026-11-12T01:29:00Z') }); await page.clock.pauseAt(new Date('2026-11-12T01:30:00Z'));
-      await page.goto(url, { waitUntil: 'load' });
+      await page.goto(url + 'old/', { waitUntil: 'load' });   // Tree before packs, with its own rain
       await page.addScriptTag({ url: url + 'packs.js' });
       const downpour = TP.check(shelf('rain')).pack.themes.find(t => t.id === 'downpour');
       const r = await page.evaluate(async theme => {
@@ -281,6 +287,142 @@ async function browserTests() {
     assert.strictEqual(r.animations, 0);
   });
 
+  await treeTests(browser, url);
   srv.close();
   await browser.close();
+}
+
+// ── Tree 2.0 with packs ──────────────────────────────────────────────────
+async function treeTests(browser, url) {
+  // A stand-in shelf: the tree-packs checkout, served where Tree looks for it.
+  async function open(settings, extra) {
+    const ctx = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 1280, height: 800 } });
+    await ctx.route('https://uncle-jasper.github.io/tree-packs/**', route => {
+      const f = path.join(PACKS_DIR, new URL(route.request().url()).pathname.replace('/tree-packs/', ''));
+      if (fs.existsSync(f)) route.fulfill({ status: 200, contentType: 'application/json', body: fs.readFileSync(f, 'utf8') });
+      else route.fulfill({ status: 404, body: '' });
+    });
+    await ctx.addInitScript(([s, x]) => {
+      if (sessionStorage.getItem('seeded')) return;
+      sessionStorage.setItem('seeded', '1');
+      if (s) localStorage.setItem('tree-editor-settings', s);
+      for (const k in x || {}) localStorage.setItem(k, x[k]);
+    }, [settings ? JSON.stringify(settings) : null, extra || {}]);
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    page.on('dialog', d => d.accept());
+    await page.goto(url, { waitUntil: 'load' });
+    await page.waitForFunction(() => typeof packs !== 'undefined' && packs.restored);
+    return { ctx, page, errors };
+  }
+  const state = page => page.evaluate(() => {
+    const pack = findPack(packs.current.pack), theme = TreePacks.findTheme(pack, packs.current.theme);
+    const on = {}; for (const sw of TreePacks.switchesOf(theme)) { const c = themeChoices(pack, theme)[sw.label]; on[sw.label] = typeof c === 'boolean' ? c : sw.on; }
+    return { pack: pack.id, theme: theme.id, switches: on, installed: Object.keys(packs.installed),
+      saved: JSON.parse(localStorage.getItem('tree-editor-settings') || 'null') };
+  });
+
+  await test('Tree: every old saved setting lands where the plan says, and stays readable by Ginkgo', async () => {
+    const dir = path.join(ROOT, 'baseline', 'fixtures', 'tree');
+    for (const f of fs.readdirSync(dir)) {
+      const fx = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
+      const { ctx, page, errors } = await open(fx.settings);
+      const st = await state(page);
+      await page.evaluate(() => saveSettings());
+      const after = await state(page);
+      await ctx.close();
+      assert.deepStrictEqual(errors, [], f + ': page errors');
+      assert.deepStrictEqual({ pack: st.pack, theme: st.theme }, { pack: fx.after.pack, theme: fx.after.theme }, f);
+      for (const [k, v] of Object.entries(fx.after.switches || {})) assert.strictEqual(st.switches[k], v, `${f}: ${k}`);
+      if (fx.after.pack === 'rain') assert.ok(st.installed.includes('rain'), f + ': Rain pack should be installed');
+      if (fx.settings) for (const k of ['theme', 'downpour', 'rainStill', 'crtEnabled'])
+        assert.strictEqual(!!after.saved[k] && after.saved[k], !!fx.settings[k] && fx.settings[k], `${f}: saved ${k} changed`);
+    }
+  });
+
+  await test('Tree: install from the shelf, use it, survive a reload, uninstall back to dark', async () => {
+    const { ctx, page, errors } = await open(null);
+    await page.click('#theme-label');
+    await page.click('#btn-packs');
+    await page.waitForSelector('#packs-shelf .pk-btn.go');
+    const offered = await page.$$eval('#packs-shelf .pk-name', els => els.map(e => e.firstChild.textContent));
+    assert.deepStrictEqual(offered.sort(), ['judgment day', 'rain']);
+    await page.click('#packs-shelf .pk:has-text("judgment day") .pk-btn.go');
+    await page.waitForFunction(() => packs.installed['judgment-day']);
+    assert.match(await page.textContent('#packs-note'), /judgment day installed/);
+    await page.click('#btn-packs-close');
+    await page.evaluate(() => selectPackTheme('judgment-day', 'hud'));
+    assert.strictEqual(await page.evaluate(() => document.body.dataset.theme), 'pack');
+    assert.strictEqual(await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--text').trim()), '#ff5a48');
+    await page.reload(); await page.waitForFunction(() => packs.restored);
+    let st = await state(page);
+    assert.deepStrictEqual([st.pack, st.theme], ['judgment-day', 'hud']);
+    assert.strictEqual(st.saved.theme, 'dark', 'Ginkgo should see a dark theme it knows');
+    // Returning to a pack opens the theme last used in it.
+    await page.evaluate(() => selectPackTheme('classic', 'sage'));
+    await page.evaluate(() => stepPack(1)); await page.evaluate(() => stepPack(1));
+    st = await state(page);
+    assert.deepStrictEqual([st.pack, st.theme], ['judgment-day', 'hud']);
+    await page.click('#theme-label'); await page.click('#btn-packs');
+    await page.click('#packs-installed .pk:has-text("judgment day") .pk-btn:has-text("uninstall")');
+    assert.match(await page.textContent('#packs-note'), /switched to dark/);
+    st = await state(page);
+    assert.deepStrictEqual([st.pack, st.theme, st.installed.length], ['classic', 'dark', 0]);
+    await ctx.close();
+    assert.deepStrictEqual(errors, []);
+  });
+
+  await test('Tree: import a pack file; a broken one is refused in one line', async () => {
+    const { ctx, page, errors } = await open(null);
+    await page.click('#theme-label'); await page.click('#btn-packs');
+    await page.setInputFiles('#pack-file', { name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from('{"treePack":1,"id":"x"}') });
+    await page.waitForFunction(() => document.getElementById('packs-note').textContent);
+    assert.match(await page.textContent('#packs-note'), /^not installed: /);
+    await page.setInputFiles('#pack-file', path.join(PACKS_DIR, 'packs', 'rain.tree-pack.json'));
+    await page.waitForFunction(() => packs.installed.rain);
+    assert.match(await page.textContent('#packs-note'), /rain installed/);
+    await ctx.close();
+    assert.deepStrictEqual(errors, []);
+  });
+
+  await test('Tree: an older installed pack is offered as an update', async () => {
+    const old = JSON.parse(fs.readFileSync(path.join(PACKS_DIR, 'packs', 'rain.tree-pack.json'), 'utf8'));
+    old.version = '0.9.0'; old.themes[0].colors.bg = '#000000';
+    const { ctx, page } = await open(null, { 'tree-packs': JSON.stringify({ installed: { rain: old }, seen: {} }) });
+    await page.click('#theme-label');
+    await page.waitForFunction(() => packs.shelfState === 'ok');
+    assert.strictEqual(await page.textContent('#packs-new'), '2 new');
+    await page.click('#btn-packs');
+    await page.click('#packs-installed .pk-btn:has-text("update")');
+    await page.waitForFunction(() => packs.installed.rain.version === '1.0.0');
+    assert.strictEqual(await page.evaluate(() => packs.installed.rain.themes[0].colors.bg), '#ccd4d6');
+    await page.click('#btn-packs-close');
+    assert.strictEqual(await page.textContent('#packs-new'), '', 'nothing new once seen and updated');
+    await ctx.close();
+  });
+
+  await test('Tree: offline, the shelf says so and installed packs still work', async () => {
+    const ctx = await browser.newContext({ serviceWorkers: 'block', offline: false });
+    await ctx.route('https://uncle-jasper.github.io/**', r => r.abort());
+    const rain = fs.readFileSync(path.join(PACKS_DIR, 'packs', 'rain.tree-pack.json'), 'utf8');
+    await ctx.addInitScript(r => { if (!localStorage.getItem('tree-packs')) localStorage.setItem('tree-packs', JSON.stringify({ installed: { rain: JSON.parse(r) } })); }, rain);
+    const page = await ctx.newPage();
+    await page.goto(url); await page.waitForFunction(() => packs.restored);
+    await page.evaluate(() => selectPackTheme('rain', 'wet-neon'));
+    await page.click('#theme-label'); await page.click('#btn-packs');
+    await page.waitForFunction(() => packs.shelfState === 'offline');
+    assert.match(await page.textContent('#packs-shelf'), /shelf not reachable/);
+    assert.strictEqual(await page.evaluate(() => document.body.dataset.theme), 'pack');
+    await ctx.close();
+  });
+
+  await test("Tree: Just Write keeps the theme fixed", async () => {
+    const { ctx, page } = await open(null);
+    await page.evaluate(() => { justWriteActive = true; selectPackTheme('retro', 'gameboy'); stepPack(1); openPacks(); });
+    const st = await state(page);
+    const packsShown = await page.evaluate(() => packsOpen());
+    await ctx.close();
+    assert.deepStrictEqual([st.pack, st.theme, packsShown], ['classic', 'parchment', false]);
+  });
 }

@@ -260,7 +260,11 @@ async function capture() {
       const saved = JSON.parse(fs.readFileSync(file, 'utf8'));
       for (const view of VIEWS) {
         const { ctx, page, frame, srv } = await open(app, browser, view, saved.settings, true);
-        if (saved.session) await enterSession(page, frame, saved.session);
+        // With packs (Tree 2.0) the codes are gone: amber crt and doogie journal
+        // are ordinary Retro themes, chosen like any other.
+        if (saved.session && await frame.evaluate(() => typeof selectPackTheme === 'function'))
+          await frame.evaluate(id => selectPackTheme('retro', id), saved.session);
+        else if (saved.session) await enterSession(page, frame, saved.session);
         // Park the cursor at the top so every shot shows the same lines.
         await frame.evaluate(() => { if (typeof view !== 'undefined' && view) { view.dispatch({ selection: { anchor: 0 } }); view.contentDOM.blur(); } });
         await settle(page);
