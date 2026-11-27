@@ -4,7 +4,7 @@ The plan for bringing theme packs to Tree, Ginkgo and the Tree Obsidian plugin. 
 
 The packs themselves, their format and the shelf live in [`uncle-jasper/tree-packs`](https://github.com/uncle-jasper/tree-packs). This file is about the apps.
 
-**Status:** Phases 1 and 2 done. Phase 3 (Tree 2.0) built on branch `claude/peaceful-ride-t07r40`, awaiting Dan's check: 55 of 60 baseline shots identical, the other 5 differ only in the tab name and line count that typing the old secret codes changed. Before release, the shelf must be live (see Dan's one-time setup).
+**Status:** Phases 1 and 2 done. Phase 3 (Tree 2.0) and phase 4 (Ginkgo 2.0) built on branch `claude/peaceful-ride-t07r40` in each repo, awaiting Dan's check. Tree: 55 of 60 baseline shots identical, the rest differ only where typing the old codes changed the tab name or line count. Ginkgo: the same, plus custom themes, whose frame now takes the editor's colors (the planned change). Before release, the shelf must be live (see Dan's one-time setup).
 
 ## What a pack is
 
@@ -27,7 +27,7 @@ Packs are installed from a shelf, the `tree-packs` repo published on GitHub, wit
 | Choosing a pack | Opens on its everyday theme the first time; after that, on the theme last used in it |
 | Falling rain | A switch any Rain theme can turn on; on by default for downpour and wet neon |
 | Custom themes | Stay exactly as they are: three slots in Classic, same `.tree-theme.json` import and export, old files keep working |
-| Each app's packs | Each app keeps its own installed packs. Same files, same IDs, so a pack looks the same in all three. |
+| Each app's packs | Tree and Ginkgo share installed packs and the theme in use: they're on the same site, so the browser gives them one storage, as it already did for the theme. Home-screen apps on iPhone each have their own storage, so there each keeps its own. The plugin keeps its packs in the vault. Same files, same IDs, so a pack looks the same everywhere. |
 | Pack sizes | Not a concern: a pack is a few KB. Packs are about keeping the list short. |
 | Versions | Each app becomes 2.0 when its phase ships: Tree in phase 3, Ginkgo in 4, the plugin in 5 |
 | Also in each app's 2.0 | A 12px font size; the plugin's cursor shape (3px rounded bar) in Tree and Ginkgo |
