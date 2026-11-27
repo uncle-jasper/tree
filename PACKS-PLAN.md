@@ -4,7 +4,7 @@ The plan for bringing theme packs to Tree, Ginkgo and the Tree Obsidian plugin. 
 
 The packs themselves, their format and the shelf live in [`uncle-jasper/tree-packs`](https://github.com/uncle-jasper/tree-packs). This file is about the apps.
 
-**Status:** Phase 1 (safety net) done: [`baseline/`](baseline/) holds saved-settings fixtures and 120 baseline screenshots of Tree and Ginkgo, with a script to capture and compare. Next: phase 2. Nothing in the apps has changed.
+**Status:** Phase 1 (safety net) done: [`baseline/`](baseline/). Phase 2 (engine) built and awaiting Dan's look: [`packs.js`](packs.js), its tests in [`tests/`](tests/), and the previewer `preview.html` in tree-packs. Pack descriptions are now required. Nothing in the apps has changed.
 
 ## What a pack is
 
