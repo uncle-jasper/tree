@@ -509,12 +509,23 @@ async function treeTests(browser, url) {
     assert.deepStrictEqual(errors, []);
   });
 
-  await test("Tree: Just Write keeps the theme fixed", async () => {
+  await test("Tree: Just Write locks the look, packs included", async () => {
     const { ctx, page } = await open(null);
-    await page.evaluate(() => { justWriteActive = true; selectPackTheme('retro', 'gameboy'); stepPack(1); openPacks(); });
+    // The Packs screen open when Just Write starts: it closes, and nothing in it works
+    await page.evaluate(() => { selectPackTheme('retro', 'terminal'); openPacks(); });
+    await page.evaluate(() => activateJustWrite());
+    const closed = await page.evaluate(() => !packsOpen());
+    await page.evaluate(() => setSwitch('crt', true));
+    const crt = await page.evaluate(() => document.body.classList.contains('crt-on'));
+    await page.evaluate(() => { selectPackTheme('classic', 'parchment'); stepPack(1); openPacks(); });
+    const st0 = await state(page);
+    assert.ok(closed, 'the Packs screen closes when Just Write starts');
+    assert.strictEqual(crt, false, 'switches are locked too');
+    assert.deepStrictEqual([st0.pack, st0.theme], ['retro', 'terminal']);
+    await page.evaluate(() => { selectPackTheme('retro', 'gameboy'); stepPack(1); openPacks(); });
     const st = await state(page);
     const packsShown = await page.evaluate(() => packsOpen());
     await ctx.close();
-    assert.deepStrictEqual([st.pack, st.theme, packsShown], ['classic', 'parchment', false]);
+    assert.deepStrictEqual([st.pack, st.theme, packsShown], ['retro', 'terminal', false]);
   });
 }
