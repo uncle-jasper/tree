@@ -317,6 +317,29 @@ async function browserTests() {
     assert.deepStrictEqual([r.prefixed, r.unprefixed, r.sheen, r.layers, r.dataset], ['#15181b', '', true, 0, undefined]);
   });
 
+  await test('snow: round flakes that drift down slowly; rain stays streaks', async () => {
+    const page = await browser.newPage({ viewport: { width: 800, height: 600 } });
+    await page.clock.install({ time: new Date('2026-11-12T01:29:00Z') }); await page.clock.pauseAt(new Date('2026-11-12T01:30:00Z'));
+    await page.goto(url + 'tests/blank.html');
+    const r = await page.evaluate(() => {
+      const theme = TreePacks.check({ treePack: 1, id: 'snow-test', name: 'Snow', version: '1.0.0', description: 'test', everyday: 'snow',
+        themes: [{ id: 'snow', name: 'snow', colors: { bg: '#1a2230', surface: '#1f2838', text: '#d7dfe9', accent: '#a3c6e8', muted: '#61718a', border: '#2a3446' },
+          effects: [{ type: 'particles', style: 'snow', color: '#eef3f9' }, { type: 'particles', style: 'hail' }] }] }).pack.themes[0];
+      const stage = TreePacks.createStage(); stage.apply(theme, {});
+      const flakes = stage.rains[0].drops.slice(), before = flakes.map(d => d.y);
+      for (let i = 0; i < 60; i++) { stage.rains[0]._internals.step(); cancelAnimationFrame(stage.rains[0].frame); }
+      const still = stage.rains[0].drops;   // the same flakes, where they haven't left the bottom yet
+      const fell = flakes.map((d, i) => still.includes(d) ? d.y - before[i] : null).filter(v => v !== null);
+      return { styles: theme.effects.map(e => e.style || 'rain'), round: flakes.every(d => d.rad > 0 && d.len === undefined),
+        maxFall: Math.max(...fell), minFall: Math.min(...fell), count: flakes.length };
+    });
+    await page.close();
+    assert.deepStrictEqual(r.styles, ['snow', 'rain'], 'an unknown style falls back to rain');
+    assert.ok(r.round, 'flakes are round');
+    assert.ok(r.maxFall < 60 * 2 && r.minFall > 0, 'slow and steady: fell ' + r.minFall.toFixed(1) + '–' + r.maxFall.toFixed(1) + 'px in 60 frames');
+    assert.ok(r.count > 30 && r.count < 120, r.count + ' flakes');
+  });
+
   await test('reduced motion: rain holds still, light does not flicker', async () => {
     const ctx = await browser.newContext({ reducedMotion: 'reduce' });
     const page = await ctx.newPage();
