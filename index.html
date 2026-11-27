@@ -619,10 +619,11 @@
   }
   body[data-theme="terminal"] .cm-cursor { border-left-color: #33ff33 !important; caret-color: #33ff33; }
 
-  /* ── Amber CRT ── */
+  /* ── Amber terminal (crt switch: off is amber on black, on adds the CRT) ── */
   body[data-theme="terminal"].amber-crt { --text:#ffb000; --accent:#7a4a00; --muted:#a06a00; --border:#3a2200; }
-  body[data-theme="terminal"].amber-crt .cm-content,
-  body[data-theme="terminal"].amber-crt #preview { text-shadow: 0 0 10px color-mix(in srgb, currentColor 55%, transparent), 0 0 3px color-mix(in srgb, currentColor 70%, transparent); -webkit-font-smoothing: none; -moz-osx-font-smoothing: unset; }
+  /* crt off: terminal's soft glow; crt on: this stronger phosphor glow */
+  body[data-theme="terminal"].amber-crt.crt-on .cm-content,
+  body[data-theme="terminal"].amber-crt.crt-on #preview { text-shadow: 0 0 10px color-mix(in srgb, currentColor 55%, transparent), 0 0 3px color-mix(in srgb, currentColor 70%, transparent); -webkit-font-smoothing: none; -moz-osx-font-smoothing: unset; }
   body[data-theme="terminal"].amber-crt #preview a,
   body[data-theme="terminal"].amber-crt #preview .footnote-ref { color: #ffd27a; }
   body[data-theme="terminal"].amber-crt #statusbar { text-shadow: 0 0 6px color-mix(in srgb, currentColor 40%, transparent); }
@@ -634,16 +635,16 @@
   /* ── Retro block cursor (terminal + CRT on) ── */
   body[data-theme="terminal"].crt-on .cm-cursor,
   body[data-theme="terminal"].crt-on .cm-dropCursor,
-  body[data-theme="terminal"].amber-crt .cm-cursor,
-  body[data-theme="terminal"].amber-crt .cm-dropCursor {
+  body[data-theme="terminal"].amber-crt.crt-on .cm-cursor,
+  body[data-theme="terminal"].amber-crt.crt-on .cm-dropCursor {
     border-left: none !important;
     width: 1ch !important;
     background-color: #33ff33;
     box-shadow: 0 0 10px rgba(51,255,51,0.55), 0 0 3px rgba(51,255,51,0.7);
     transform: none;
   }
-  body[data-theme="terminal"].amber-crt .cm-cursor,
-  body[data-theme="terminal"].amber-crt .cm-dropCursor { background-color: #ffb000; box-shadow: 0 0 10px rgba(255,176,0,0.55), 0 0 3px rgba(255,176,0,0.7); }
+  body[data-theme="terminal"].amber-crt.crt-on .cm-cursor,
+  body[data-theme="terminal"].amber-crt.crt-on .cm-dropCursor { background-color: #ffb000; box-shadow: 0 0 10px rgba(255,176,0,0.55), 0 0 3px rgba(255,176,0,0.7); }
 
   /* ── Block and underline cursors: custom themes, Terminal CRT, Amber CRT and Doogie Journal.
         shapeCursorPlugin draws them (.tree-cursor-shape) the size of the character they sit on, and
@@ -691,9 +692,12 @@
   body[data-theme="terminal"].doogie-journal select,
   body[data-theme="terminal"].doogie-journal .custom-dropdown { border-left-color: #00AAAA !important; }
 
-  /* underline cursor, WordPerfect-style, overrides the block cursor */
+  /* crt off: a bar cursor in the text's light grey, not terminal's green */
   body[data-theme="terminal"].doogie-journal .cm-cursor,
-  body[data-theme="terminal"].doogie-journal .cm-dropCursor {
+  body[data-theme="terminal"].doogie-journal .cm-dropCursor { border-left-color: #EAEAEA !important; caret-color: #EAEAEA; }
+  /* crt on: underline cursor, WordPerfect-style, overrides the block cursor */
+  body[data-theme="terminal"].doogie-journal.crt-on .cm-cursor,
+  body[data-theme="terminal"].doogie-journal.crt-on .cm-dropCursor {
     background-color: transparent !important;
     border-left: none !important;
     border-bottom: 2px solid var(--text) !important;
@@ -2380,8 +2384,8 @@ function cursorShape() {
   if (b.contains('cursor-block'))     return 'block';
   if (b.contains('cursor-underline')) return 'underline';
   if (document.body.dataset.theme !== 'terminal') return 'line';
-  if (b.contains('doogie-journal'))   return 'underline';
-  return (b.contains('crt-on') || b.contains('amber-crt')) ? 'block' : 'line';
+  if (b.contains('doogie-journal') && b.contains('crt-on')) return 'underline';
+  return b.contains('crt-on') ? 'block' : 'line';   // the CRT block, on any terminal screen with crt on
 }
 
 const shapeCursorPlugin = ViewPlugin.fromClass(class {
@@ -5529,9 +5533,10 @@ WHAT'S NEW IN 2.0
     pack's themes, and a pack reopens on the theme you last
     used in it.
   · Classic (parchment to slate, and your three custom themes)
-    and Retro (game boy, moonwalker, terminal, amber crt and
+    and Retro (game boy, moonwalker, terminal, amber terminal and
     doogie journal) are built in. Amber crt and doogie journal
-    are ordinary themes now; the secret codes are gone.
+    are ordinary themes now, each with a crt switch; the
+    secret codes are gone. Amber crt is now amber terminal.
   · More packs on the shelf: "packs…" in "style" installs them,
     and keeps them updated. They work offline once installed.
     You can also import and export a pack file.

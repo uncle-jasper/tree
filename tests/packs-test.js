@@ -93,7 +93,7 @@ const clone = o => JSON.parse(JSON.stringify(o));
   await test('Classic and Retro hold the themes the plan lists', () => {
     const [classic, retro] = TP.BUILTIN;
     assert.deepStrictEqual(classic.themes.map(t => t.name), ['parchment', 'paper', 'ash', 'sage', 'dark', 'moss', 'slate', 'custom', 'custom 2', 'custom 3']);
-    assert.deepStrictEqual(retro.themes.map(t => t.name), ['game boy', 'moonwalker', 'terminal', 'amber crt', 'doogie journal']);
+    assert.deepStrictEqual(retro.themes.map(t => t.name), ['game boy', 'moonwalker', 'terminal', 'amber terminal', 'doogie journal']);
     assert.deepStrictEqual(TP.switchesOf(TP.findTheme(retro, 'terminal')), [{ label: 'crt', on: false }]);
   });
   await test("built-in colors match today's theme CSS in Tree", () => {
@@ -415,6 +415,27 @@ async function treeTests(browser, url) {
     assert.match(await page.textContent('#packs-shelf'), /shelf not reachable/);
     assert.strictEqual(await page.evaluate(() => document.body.dataset.theme), 'pack');
     await ctx.close();
+  });
+
+  await test('Tree: amber terminal and doogie journal start with crt on, and can turn it off', async () => {
+    const { ctx, page, errors } = await open(null);
+    const look = () => page.evaluate(() => ({ crt: document.body.classList.contains('crt-on'),
+      amber: document.body.classList.contains('amber-crt'), doogie: document.body.classList.contains('doogie-journal'), shape: cursorShape() }));
+    await page.evaluate(() => selectPackTheme('retro', 'amber-crt'));
+    assert.deepStrictEqual(await look(), { crt: true, amber: true, doogie: false, shape: 'block' });
+    await page.evaluate(() => setSwitch('crt', false));
+    assert.deepStrictEqual(await look(), { crt: false, amber: true, doogie: false, shape: 'line' });
+    await page.evaluate(() => selectPackTheme('retro', 'doogie-journal'));
+    assert.deepStrictEqual(await look(), { crt: true, amber: false, doogie: true, shape: 'underline' });
+    await page.evaluate(() => setSwitch('crt', false));
+    assert.deepStrictEqual(await look(), { crt: false, amber: false, doogie: true, shape: 'line' });
+    // Each theme keeps its own choice.
+    await page.evaluate(() => selectPackTheme('retro', 'amber-crt'));
+    assert.strictEqual((await look()).crt, false);
+    await page.evaluate(() => selectPackTheme('retro', 'terminal'));
+    assert.strictEqual((await look()).crt, false);
+    await ctx.close();
+    assert.deepStrictEqual(errors, []);
   });
 
   await test("Tree: Just Write keeps the theme fixed", async () => {

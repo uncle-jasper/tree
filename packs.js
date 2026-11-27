@@ -145,6 +145,7 @@
     native: { theme: id, classes: [] } }, extra || {});
   const custom = (id, name) => T(id, name, true, ['#f5f0e8', '#ede8de', '#2c2416', '#8b6e4e', '#a89880', '#d4c8b4'], { custom: true });
   const CRT = { type: 'native', switch: 'crt', on: false, className: 'crt-on' };
+  const CRT_ON = Object.assign({}, CRT, { on: true });   // amber terminal and doogie journal start with crt on
   const BUILTIN = [
     { treePack: 1, id: 'classic', name: 'Classic', version: '1.0.0', builtin: true, everyday: 'parchment',
       description: "Tree's own themes, and your three custom ones.",
@@ -164,10 +165,10 @@
         T('gameboy',    'game boy',   true,  ['#b5bd8e', '#a6ae80', '#33422a', '#5f6f47', '#7c8760', '#96a072']),
         T('moonwalker', 'moonwalker', false, ['#000000', '#0b0f14', '#6cb5f8', '#0127dd', '#1a3fae', '#0d1a4a']),
         T('terminal',   'terminal',   false, ['#0a0a0a', '#0f0f0f', '#22cc22', '#0a5c0a', '#1a7a1a', '#1a3a1a'], { effects: [CRT] }),
-        T('amber-crt',  'amber crt',  false, ['#0a0a0a', '#0f0f0f', '#ffb000', '#7a4a00', '#a06a00', '#3a2200'],
-          { native: { theme: 'terminal', classes: ['crt-on', 'amber-crt'] } }),
+        T('amber-crt',  'amber terminal', false, ['#0a0a0a', '#0f0f0f', '#ffb000', '#7a4a00', '#a06a00', '#3a2200'],
+          { native: { theme: 'terminal', classes: ['amber-crt'] }, effects: [CRT_ON] }),
         T('doogie-journal', 'doogie journal', false, ['#0000aa', '#0000aa', '#eaeaea', '#00aaaa', '#7575ca', '#2323b4'],
-          { native: { theme: 'terminal', classes: ['crt-on', 'doogie-journal'] } }),
+          { native: { theme: 'terminal', classes: ['doogie-journal'] }, effects: [CRT_ON] }),
       ] },
   ];
 
